@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard – OrderHub{% endblock %}
+
+{% block content %}
+<h2>Welcome, {{ user.Name|default:user.Code }}</h2>
+
+<div class="dashboard-grid">
+    <a class="card" href="{% url 'core:products' %}">
+        <h3>Products</h3>
+        <p>Browse and add items to your cart.</p>
+    </a>
+    <a class="card" href="{% url 'core:checkout' %}">
+        <h3>Checkout</h3>
+        <p>Review cart and place your order.</p>
+    </a>
+</div>
+{% endblock %}
