@@ -14,7 +14,7 @@ class Customer(AbstractUser):
     REQUIRED_FIELDS = ['username']
 
     def __str__(self):
-        return f"{self.Code} – {self.Name}"
+        return f"{self.Code} - {self.Name}"
 
 
 # ── Product ───────────────────────────────────────────────
@@ -24,7 +24,7 @@ class Product(models.Model):
     Rate = models.DecimalField(max_digits=14, decimal_places=2)
 
     def __str__(self):
-        return f"{self.Code} – {self.Name}"
+        return f"{self.Code} - {self.Name}"
 
 
 # ── Stock ─────────────────────────────────────────────────

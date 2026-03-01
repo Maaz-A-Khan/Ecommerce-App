@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-
+from .models import Customer
 
 # ── Login ─────────────────────────────────────────────────
 def login_view(request):
@@ -43,3 +43,26 @@ def product_list_view(request):
 def order_checkout_view(request):
     # Phase 9 will implement full checkout logic with transaction.atomic()
     return render(request, 'checkout.html')
+
+# ── Register ──────────────────────────────────────────────
+def register_view(request):
+    if request.method == 'POST':
+        code     = request.POST.get('code')
+        name     = request.POST.get('name')
+        address  = request.POST.get('address')
+        password = request.POST.get('password')
+
+        if Customer.objects.filter(Code=code).exists():
+            return render(request, 'register.html', {'error': 'Code already exists'})
+
+        user = Customer.objects.create_user(
+            username=code,   # AbstractUser requires username
+            Code=code,
+            Name=name,
+            Address=address,
+            password=password
+        )
+        login(request, user)
+        return redirect('core:dashboard')
+
+    return render(request, 'register.html')
