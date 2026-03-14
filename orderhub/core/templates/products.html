@@ -1,39 +1,43 @@
 {% extends 'base.html' %}
 
 {% block title %}Products – OrderHub{% endblock %}
+{% block nav_products %}active{% endblock %}
+{% block page_title %}Products{% endblock %}
 
 {% block content %}
-<h2>Product List</h2>
+<div class="products-container">
+    <h2>Product List</h2>
 
-<table class="data-table">
-    <thead>
-        <tr>
-            <th>Code</th>
-            <th>Name</th>
-            <th>Rate (PKR)</th>
-            <th>Action</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for product in products %}
-        <tr>
-            <td>{{ product.Code }}</td>
-            <td>{{ product.Name }}</td>
-            <td>{{ product.Rate }}</td>
-            <td>
-                <button class="btn btn-sm btn-primary add-to-cart"
-                        data-code="{{ product.Code }}"
-                        data-name="{{ product.Name }}"
-                        data-rate="{{ product.Rate }}">
-                    Add to Cart
-                </button>
-            </td>
-        </tr>
-        {% empty %}
-            <tr><td colspan="4">No products found.</td></tr>
-        {% endfor %}
-    </tbody>
-</table>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Code</th>
+                <th>Name</th>
+                <th>Rate (PKR)</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for product in products %}
+            <tr>
+                <td>{{ product.Code }}</td>
+                <td>{{ product.Name }}</td>
+                <td>{{ product.Rate }}</td>
+                <td>
+                    <button class="btn btn-sm btn-primary add-to-cart"
+                            data-code="{{ product.Code }}"
+                            data-name="{{ product.Name }}"
+                            data-rate="{{ product.Rate }}">
+                        Add to Cart
+                    </button>
+                </td>
+            </tr>
+            {% empty %}
+                <tr><td colspan="4">No products found.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
 
 <!-- Cart summary (populated by main.js in Phase 8) -->
 <div class="cart-summary">
