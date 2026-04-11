@@ -42,8 +42,8 @@
             <div class="topbar-right">
                 <span class="topbar-cart">&#9786; Cart: <strong id="topbar-cart-count">0</strong> item(s)</span>
                 <div class="topbar-user">
-                    <span class="user-avatar">{{ user.Code|first|upper }}</span>
-                    <span class="user-name">{{ user.Name|default:user.Code }}</span>
+                    <span class="user-avatar">{{ user.username|first|upper }}</span>
+                    <span class="user-name">{{ user.name|default:user.username }}</span>
                 </div>
                 <a href="{% url 'core:logout' %}" class="btn btn-logout">Logout</a>
             </div>

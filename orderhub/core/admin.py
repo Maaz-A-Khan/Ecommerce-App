@@ -1,35 +1,67 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import Customer, Product, Stock, OrderMaster, OrderDetail
+from .models import (
+    user, chart_of_account, category, warehouse,
+    product, order_master, order_detail, stock,
+)
 
-# Customer needs UserAdmin because it extends AbstractUser
-@admin.register(Customer)
-class CustomerAdmin(UserAdmin):
-    # show these columns in the list view
-    list_display  = ('Code', 'Name', 'Address', 'is_staff')
-    # make Code searchable
-    search_fields = ('Code', 'Name')
-    ordering      = ('Code',)
 
-    # add Code/Name/Address fields to the admin form
+# ── user (extends AbstractUser → needs UserAdmin) ────────
+@admin.register(user)
+class userAdmin(UserAdmin):
+    list_display  = ('username', 'name', 'role', 'is_staff')
+    search_fields = ('username', 'name')
+    ordering      = ('username',)
+
     fieldsets = UserAdmin.fieldsets + (
-        ('Customer Info', {'fields': ('Code', 'Name', 'Address')}),
+        ('User Info', {'fields': ('name', 'role', 'account_code')}),
     )
 
-@admin.register(Product)
-class ProductAdmin(admin.ModelAdmin):
-    list_display  = ('Code', 'Name', 'Rate')
-    search_fields = ('Code', 'Name')
 
-@admin.register(Stock)
-class StockAdmin(admin.ModelAdmin):
-    list_display = ('Idno', 'Product', 'Qty')
+# ── chart_of_account ─────────────────────────────────────
+@admin.register(chart_of_account)
+class chartOfAccountAdmin(admin.ModelAdmin):
+    list_display  = ('code', 'name', 'account_type')
+    search_fields = ('code', 'name')
 
-@admin.register(OrderMaster)
-class OrderMasterAdmin(admin.ModelAdmin):
-    list_display = ('Idno', 'Entry_No', 'Customer', 'Order_Type')
 
-@admin.register(OrderDetail)
-class OrderDetailAdmin(admin.ModelAdmin):
-    list_display  = ('Idno', 'order', 'Product', 'Qty', 'Rate', 'Amount')
-    readonly_fields = ('Amount',)   # calculated automatically, not editable
+# ── category ─────────────────────────────────────────────
+@admin.register(category)
+class categoryAdmin(admin.ModelAdmin):
+    list_display  = ('code', 'name')
+    search_fields = ('code', 'name')
+
+
+# ── warehouse ────────────────────────────────────────────
+@admin.register(warehouse)
+class warehouseAdmin(admin.ModelAdmin):
+    list_display  = ('code', 'name')
+    search_fields = ('code', 'name')
+
+
+# ── product ──────────────────────────────────────────────
+@admin.register(product)
+class productAdmin(admin.ModelAdmin):
+    list_display  = ('code', 'name', 'rate', 'category_code')
+    search_fields = ('code', 'name')
+
+
+# ── order_master ─────────────────────────────────────────
+@admin.register(order_master)
+class orderMasterAdmin(admin.ModelAdmin):
+    list_display = ('idno', 'user', 'order_type',
+                    'entry_no', 'order_date')
+
+
+# ── order_detail ─────────────────────────────────────────
+@admin.register(order_detail)
+class orderDetailAdmin(admin.ModelAdmin):
+    list_display = ('idno', 'order_master_idno', 'product_code',
+                    'warehouse_code', 'qty', 'rate')
+
+
+# ── stock ─────────────────────────────────────────────────
+@admin.register(stock)
+class stockAdmin(admin.ModelAdmin):
+    list_display = ('idno', 'order_master_idno', 'warehouse_code',
+                    'product_code', 'issue', 'receive', 'date')

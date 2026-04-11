@@ -20,14 +20,14 @@
         <tbody>
             {% for product in products %}
             <tr>
-                <td>{{ product.Code }}</td>
-                <td>{{ product.Name }}</td>
-                <td>{{ product.Rate }}</td>
+                <td>{{ product.code }}</td>
+                <td>{{ product.name }}</td>
+                <td>{{ product.rate }}</td>
                 <td>
                     <button class="btn btn-sm btn-primary add-to-cart"
-                            data-code="{{ product.Code }}"
-                            data-name="{{ product.Name }}"
-                            data-rate="{{ product.Rate }}">
+                            data-code="{{ product.code }}"
+                            data-name="{{ product.name }}"
+                            data-rate="{{ product.rate }}">
                         Add to Cart
                     </button>
                 </td>
