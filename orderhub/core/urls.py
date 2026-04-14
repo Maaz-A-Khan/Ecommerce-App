@@ -10,7 +10,9 @@ urlpatterns = [
     path('dashboard/',   views.dashboard_view,      name='dashboard'),
     path('products/',    views.product_list_view,   name='products'),
     path('checkout/',    views.order_checkout_view,  name='checkout'),
-    path('register/',    views.register_view,       name='register'),
+    path('register/',           views.register_view,               name='register'),
+    path('my-orders/',          views.customer_dashboard_view,     name='customer_dashboard'),
+    path('my-orders/<int:idno>/', views.customer_order_detail_view, name='customer_order_detail'),
 
     # ── Admin Panel ──────────────────────────────────────
     path('admin-panel/products/',          views.admin_products_view,      name='admin_products'),

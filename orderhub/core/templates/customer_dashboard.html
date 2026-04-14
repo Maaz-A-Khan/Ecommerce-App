@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+
+{% block title %}My Orders – OrderHub{% endblock %}
+{% block nav_history %}active{% endblock %}
+{% block page_title %}My Orders{% endblock %}
+
+{% block content %}
+<section class="customer-dashboard">
+
+    <div class="section-header">
+        <div>
+            <h2 class="section-title">Order History</h2>
+            <p class="section-subtitle">All purchase orders placed under your account.</p>
+        </div>
+        <a href="{% url 'core:products' %}" class="btn btn-primary">+ New Order</a>
+    </div>
+
+    {% if orders %}
+    <div class="table-wrapper">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Entry No.</th>
+                    <th>Order Type</th>
+                    <th>Date</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for order in orders %}
+                <tr>
+                    <td>{{ forloop.counter }}</td>
+                    <td><span class="badge badge-info">{{ order.entry_no }}</span></td>
+                    <td>{{ order.order_type }}</td>
+                    <td>{{ order.order_date }}</td>
+                    <td>
+                        <a href="{% url 'core:customer_order_detail' order.idno %}" class="btn btn-sm btn-secondary">
+                            View Details
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <svg xmlns="http://www.w3.org/2000/svg" width="56" height="56" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="16" y1="13" x2="8" y2="13"/>
+            <line x1="16" y1="17" x2="8" y2="17"/>
+            <polyline points="10 9 9 9 8 9"/>
+        </svg>
+        <h3>No orders yet</h3>
+        <p>You haven't placed any orders. Start shopping and your order history will appear here.</p>
+        <a href="{% url 'core:products' %}" class="btn btn-primary">Browse Products</a>
+    </div>
+    {% endif %}
+
+</section>
+{% endblock %}

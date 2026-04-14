@@ -4,29 +4,19 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
-from django.db import transaction
-from django.db.models import Sum, F, Value, DecimalField
-from django.db.models.functions import Coalesce
+from django.db import connection, transaction
 from .models import (
     user, product, order_master, order_detail, stock,
     warehouse, category, chart_of_account,
 )
 
 
-# ═══════════════════════════════════════════════════════════
-#  ADMIN GUARD — only users with role == 'admin'
-# ═══════════════════════════════════════════════════════════
 def is_admin(u):
     return u.is_authenticated and u.role == 'admin'
 
 admin_required = user_passes_test(is_admin, login_url='core:login')
 
 
-# ═══════════════════════════════════════════════════════════
-#  PUBLIC / CUSTOMER VIEWS
-# ═══════════════════════════════════════════════════════════
-
-# ── Login ─────────────────────────────────────────────────
 def login_view(request):
     if request.method == 'POST':
         username = request.POST.get('username')
@@ -34,36 +24,53 @@ def login_view(request):
         u        = authenticate(request, username=username, password=password)
         if u is not None:
             login(request, u)
+            if u.role == 'admin':
+                return redirect('core:admin_products')
             return redirect('core:dashboard')
         else:
             messages.error(request, 'Invalid Username or Password.')
     return render(request, 'login.html')
 
 
-# ── Logout ────────────────────────────────────────────────
 def logout_view(request):
     logout(request)
     return redirect('core:login')
 
 
-# ── Dashboard ─────────────────────────────────────────────
 @login_required(login_url='core:login')
 def dashboard_view(request):
+    if request.user.role == 'admin':
+        return redirect('core:admin_products')
     return render(request, 'dashboard.html')
 
 
 @login_required(login_url='core:login')
 def product_list_view(request):
-    products = product.objects.all()
-    context = {'products': products}
-    return render(request, 'products.html', context)
+    if request.user.role == 'admin':
+        return redirect('core:admin_products')
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT p.code, p.name, p.rate, c.name 
+            FROM product p 
+            JOIN category c ON p.category_code = c.code
+            """
+        )
+        rows = cursor.fetchall()
+    products = [
+        {'code': r[0], 'name': r[1], 'rate': r[2], 'category_name': r[3]}
+        for r in rows
+    ]
+    return render(request, 'products.html', {'products': products})
 
-# ── Order Checkout ────────────────────────────────────────
+
 @login_required(login_url='core:login')
 def order_checkout_view(request):
+    if request.user.role == 'admin':
+        return redirect('core:admin_products')
+
     if request.method == 'POST':
-        cart_json   = request.POST.get('cart_data', '[]')
-        order_type  = request.POST.get('order_type', 'Regular')
+        cart_json = request.POST.get('cart_data', '[]')
 
         try:
             cart_items = json.loads(cart_json)
@@ -75,50 +82,83 @@ def order_checkout_view(request):
             messages.error(request, 'Your cart is empty.')
             return redirect('core:checkout')
 
-        # Generate a unique entry number
-        last_order = order_master.objects.order_by('-idno').first()
-        next_num   = (last_order.idno + 1) if last_order else 1
-        entry_no   = f"ORD-{next_num:05d}"
+        for item in cart_items:
+            product_code = item.get('code')
+            requested_qty = int(item.get('quantity', 0))
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    SELECT COALESCE(SUM(receive), 0) - COALESCE(SUM(issue), 0) 
+                    FROM stock 
+                    WHERE product_code = %s
+                    """,
+                    [product_code]
+                )
+                result = cursor.fetchone()
+            available = result[0] if result[0] is not None else 0
+            if available <= 0 or available < requested_qty:
+                messages.error(
+                    request,
+                    f'Product "{item.get("name", product_code)}" is out of stock or insufficient quantity available.'
+                )
+                return redirect('core:checkout')
 
-        # Use the first warehouse (user guarantees at least one exists)
-        default_wh = warehouse.objects.first()
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT MAX(idno) FROM order_master")
+            row = cursor.fetchone()
+        last_idno = row[0] if row[0] is not None else 0
+        next_num  = last_idno + 1
+        entry_no  = f"ORD-{next_num:05d}"
+
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT code FROM warehouse LIMIT 1")
+            wh_row = cursor.fetchone()
+        if not wh_row:
+            messages.error(request, 'No warehouse configured. Contact an administrator.')
+            return redirect('core:checkout')
+        warehouse_code = wh_row[0]
+
+        order_type = 'Purchase Order'
 
         with transaction.atomic():
-            # Create order_master (no account_code or total_amount stored)
-            om = order_master.objects.create(
-                user=request.user,
-                order_type=order_type,
-                entry_no=entry_no,
-            )
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    INSERT INTO order_master (user_id, order_type, entry_no, order_date) 
+                    VALUES (%s, %s, %s, DATE('now'))
+                    """,
+                    [request.user.id, order_type, entry_no]
+                )
+                cursor.execute("SELECT last_insert_rowid()")
+                om_idno = cursor.fetchone()[0]
 
-            # Create order_detail + stock rows for each cart item
             for item in cart_items:
-                prod  = product.objects.get(code=item['code'])
-                qty   = int(item['quantity'])
-                rate  = Decimal(str(item['rate']))
+                product_code = item['code']
+                qty  = int(item['quantity'])
+                rate = Decimal(str(item['rate']))
 
-                order_detail.objects.create(
-                    order_master_idno=om,
-                    product_code=prod,
-                    warehouse_code=default_wh,
-                    qty=qty,
-                    rate=rate,
-                )
-
-                stock.objects.create(
-                    order_master_idno=om,
-                    warehouse_code=default_wh,
-                    product_code=prod,
-                    issue=qty,
-                    receive=0,
-                )
+                with connection.cursor() as cursor:
+                    cursor.execute(
+                        """
+                        INSERT INTO order_detail (order_master_idno, product_code, warehouse_code, qty, rate) 
+                        VALUES (%s, %s, %s, %s, %s)
+                        """,
+                        [om_idno, product_code, warehouse_code, qty, str(rate)]
+                    )
+                    cursor.execute(
+                        """
+                        INSERT INTO stock (order_master_idno, warehouse_code, product_code, issue, receive, date) 
+                        VALUES (%s, %s, %s, %s, %s, DATE('now'))
+                        """,
+                        [om_idno, warehouse_code, product_code, qty, 0]
+                    )
 
         messages.success(request, f'Order {entry_no} placed successfully!')
-        return redirect('core:dashboard')
+        return redirect('core:customer_dashboard')
 
     return render(request, 'checkout.html')
 
-# ── Register ──────────────────────────────────────────────
+
 def register_view(request):
     if request.method == 'POST':
         username = request.POST.get('username')
@@ -139,15 +179,82 @@ def register_view(request):
     return render(request, 'register.html')
 
 
-# ═══════════════════════════════════════════════════════════
-#  ADMIN VIEWS
-# ═══════════════════════════════════════════════════════════
+@login_required(login_url='core:login')
+def customer_dashboard_view(request):
+    if request.user.role == 'admin':
+        return redirect('core:admin_products')
 
-# ── Tab 1: Products & Categories ──────────────────────────
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT idno, entry_no, order_type, order_date 
+            FROM order_master 
+            WHERE user_id = %s 
+            ORDER BY order_date DESC, idno DESC
+            """,
+            [request.user.id]
+        )
+        rows = cursor.fetchall()
+
+    orders = [
+        {'idno': r[0], 'entry_no': r[1], 'order_type': r[2], 'order_date': r[3]}
+        for r in rows
+    ]
+
+    return render(request, 'customer_dashboard.html', {'orders': orders})
+
+
+@login_required(login_url='core:login')
+def customer_order_detail_view(request, idno):
+    if request.user.role == 'admin':
+        return redirect('core:admin_products')
+
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT idno, entry_no, order_type, order_date 
+            FROM order_master 
+            WHERE idno = %s AND user_id = %s
+            """,
+            [idno, request.user.id]
+        )
+        om_row = cursor.fetchone()
+
+    if not om_row:
+        messages.error(request, 'Order not found.')
+        return redirect('core:customer_dashboard')
+
+    order = {'idno': om_row[0], 'entry_no': om_row[1], 'order_type': om_row[2], 'order_date': om_row[3]}
+
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT od.idno, p.name, od.qty, od.rate, (od.qty * od.rate) AS line_total 
+            FROM order_detail od 
+            JOIN product p ON od.product_code = p.code 
+            WHERE od.order_master_idno = %s
+            """,
+            [idno]
+        )
+        detail_rows = cursor.fetchall()
+
+    details = [
+        {'idno': r[0], 'product_name': r[1], 'qty': r[2], 'rate': r[3], 'line_total': r[4]}
+        for r in detail_rows
+    ]
+
+    grand_total = sum(d['line_total'] for d in details)
+
+    return render(request, 'customer_order_detail.html', {
+        'order':       order,
+        'details':     details,
+        'grand_total': grand_total,
+    })
+
+
 @login_required(login_url='core:login')
 @admin_required
 def admin_products_view(request):
-    # Handle Add Product
     if request.method == 'POST' and 'add_product' in request.POST:
         code = request.POST.get('product_code', '').strip()
         name = request.POST.get('product_name', '').strip()
@@ -168,7 +275,6 @@ def admin_products_view(request):
             messages.error(request, 'All product fields are required.')
         return redirect('core:admin_products')
 
-    # Handle Add Category
     if request.method == 'POST' and 'add_category' in request.POST:
         code = request.POST.get('category_code', '').strip()
         name = request.POST.get('category_name', '').strip()
@@ -189,7 +295,6 @@ def admin_products_view(request):
     return render(request, 'admin_products.html', context)
 
 
-# ── Tab 2: Orders ─────────────────────────────────────────
 @login_required(login_url='core:login')
 @admin_required
 def admin_orders_view(request):
@@ -210,7 +315,6 @@ def admin_order_detail_view(request, idno):
     })
 
 
-# ── Tab 3: Chart of Accounts ─────────────────────────────
 @login_required(login_url='core:login')
 @admin_required
 def admin_accounts_view(request):
@@ -222,11 +326,9 @@ def admin_accounts_view(request):
     })
 
 
-# ── Tab 4: Stock & Restocking ────────────────────────────
 @login_required(login_url='core:login')
 @admin_required
 def admin_stock_view(request):
-    # Handle Restock Order
     if request.method == 'POST':
         supplier_code = request.POST.get('supplier', '')
         product_code  = request.POST.get('product', '')
@@ -234,11 +336,10 @@ def admin_stock_view(request):
         rate          = Decimal(request.POST.get('rate', '0'))
 
         if supplier_code and product_code and qty > 0:
-            supplier = get_object_or_404(chart_of_account, code=supplier_code)
-            prod     = get_object_or_404(product, code=product_code)
+            supplier   = get_object_or_404(chart_of_account, code=supplier_code)
+            prod       = get_object_or_404(product, code=product_code)
             default_wh = warehouse.objects.first()
 
-            # Generate entry number
             last_order = order_master.objects.order_by('-idno').first()
             next_num   = (last_order.idno + 1) if last_order else 1
             entry_no   = f"RST-{next_num:05d}"
@@ -271,18 +372,28 @@ def admin_stock_view(request):
             messages.error(request, 'All restock fields are required and quantity must be > 0.')
         return redirect('core:admin_stock')
 
-    # Aggregate stock per product: available = sum(receive) - sum(issue)
-    stock_summary = stock.objects.values(
-        'product_code',
-        'product_code__name',
-    ).annotate(
-        total_receive=Coalesce(Sum('receive'), 0),
-        total_issue=Coalesce(Sum('issue'), 0),
-    ).order_by('product_code')
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT s.product_code, p.name, COALESCE(SUM(s.receive), 0), COALESCE(SUM(s.issue), 0) 
+            FROM stock s 
+            JOIN product p ON s.product_code = p.code 
+            GROUP BY s.product_code, p.name 
+            ORDER BY s.product_code
+            """
+        )
+        stock_rows = cursor.fetchall()
 
-    # Calculate available qty in Python (safe for all DBs)
-    for row in stock_summary:
-        row['available'] = row['total_receive'] - row['total_issue']
+    stock_summary = [
+        {
+            'product_code':   r[0],
+            'product_code__name': r[1],
+            'total_receive':  r[2],
+            'total_issue':    r[3],
+            'available':      r[2] - r[3],
+        }
+        for r in stock_rows
+    ]
 
     suppliers = chart_of_account.objects.filter(account_type='Supplier')
     products  = product.objects.all()

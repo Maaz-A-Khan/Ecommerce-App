@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+
+{% block title %}Order {{ order.entry_no }} – OrderHub{% endblock %}
+{% block nav_history %}active{% endblock %}
+{% block page_title %}Order Detail{% endblock %}
+
+{% block content %}
+<section class="order-detail-section">
+
+    <div class="section-header">
+        <div>
+            <h2 class="section-title">
+                <span class="badge badge-info">{{ order.entry_no }}</span>
+            </h2>
+            <p class="section-subtitle">
+                {{ order.order_type }} &mdash; Placed on {{ order.order_date }}
+            </p>
+        </div>
+        <a href="{% url 'core:customer_dashboard' %}" class="btn btn-secondary">&larr; Back to My Orders</a>
+    </div>
+
+    {% if details %}
+    <div class="table-wrapper">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Product</th>
+                    <th>Qty</th>
+                    <th>Rate (PKR)</th>
+                    <th>Line Total (PKR)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in details %}
+                <tr>
+                    <td>{{ forloop.counter }}</td>
+                    <td>{{ item.product_name }}</td>
+                    <td>{{ item.qty }}</td>
+                    <td>{{ item.rate }}</td>
+                    <td>{{ item.line_total }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr class="grand-total-row">
+                    <td colspan="4"><strong>Grand Total</strong></td>
+                    <td><strong>{{ grand_total }}</strong></td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <p>No items found for this order.</p>
+    </div>
+    {% endif %}
+
+</section>
+{% endblock %}
