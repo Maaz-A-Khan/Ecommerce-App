@@ -1,0 +1,82 @@
+{% extends 'admin_base.html' %}
+
+{% block title %}Stock & Restocking – Admin{% endblock %}
+{% block nav_stock %}active{% endblock %}
+{% block page_title %}Stock & Restocking{% endblock %}
+
+{% block content %}
+<div class="admin-grid">
+
+    <!-- ── Current Stock Summary ───────────────────────── -->
+    <section class="admin-card">
+        <div class="admin-card-header">
+            <h2>Current Stock</h2>
+        </div>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Product Code</th>
+                    <th>Product Name</th>
+                    <th>Available Qty</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in stock_summary %}
+                <tr>
+                    <td>{{ row.product_code }}</td>
+                    <td>{{ row.product_code__name }}</td>
+                    <td>
+                        <span class="stock-qty {% if row.available <= 0 %}stock-zero{% elif row.available < 10 %}stock-low{% else %}stock-ok{% endif %}">
+                            {{ row.available }}
+                        </span>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="3">No stock data yet.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </section>
+
+    <!-- ── Restock Order Form ──────────────────────────── -->
+    <section class="admin-card">
+        <div class="admin-card-header">
+            <h2>Restock Order</h2>
+        </div>
+
+        <form method="post" class="admin-form">
+            {% csrf_token %}
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="supplier">Supplier</label>
+                    <select id="supplier" name="supplier" required>
+                        <option value="">Select supplier…</option>
+                        {% for s in suppliers %}
+                            <option value="{{ s.code }}">{{ s.code }} – {{ s.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="product">Product</label>
+                    <select id="product" name="product" required>
+                        <option value="">Select product…</option>
+                        {% for p in products %}
+                            <option value="{{ p.code }}">{{ p.code }} – {{ p.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="quantity">Quantity</label>
+                    <input type="number" id="quantity" name="quantity" min="1" placeholder="0" required />
+                </div>
+                <div class="form-group">
+                    <label for="rate">Rate (PKR)</label>
+                    <input type="number" id="rate" name="rate" step="0.01" min="0" placeholder="0.00" required />
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary">Place Restock Order</button>
+        </form>
+    </section>
+
+</div>
+{% endblock %}

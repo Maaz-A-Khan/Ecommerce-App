@@ -1,0 +1,66 @@
+{% extends 'admin_base.html' %}
+
+{% block title %}Order {{ order.entry_no }} – Admin{% endblock %}
+{% block nav_orders %}active{% endblock %}
+{% block page_title %}Order Details{% endblock %}
+
+{% block content %}
+<section class="admin-card">
+    <div class="admin-card-header">
+        <h2>Order {{ order.entry_no }}</h2>
+        <a href="{% url 'core:admin_orders' %}" class="btn btn-sm btn-outline">&larr; Back to Orders</a>
+    </div>
+
+    <!-- Order Header Info -->
+    <div class="order-meta">
+        <div class="meta-item">
+            <span class="meta-label">Entry No</span>
+            <span class="meta-value">{{ order.entry_no }}</span>
+        </div>
+        <div class="meta-item">
+            <span class="meta-label">User</span>
+            <span class="meta-value">{{ order.user.name|default:order.user.username }}</span>
+        </div>
+        <div class="meta-item">
+            <span class="meta-label">Date</span>
+            <span class="meta-value">{{ order.order_date }}</span>
+        </div>
+        <div class="meta-item">
+            <span class="meta-label">Type</span>
+            <span class="meta-value"><span class="badge badge-{{ order.order_type|lower }}">{{ order.order_type }}</span></span>
+        </div>
+    </div>
+
+    <!-- Line Items Table -->
+    <h3 style="margin: 1.5rem 0 0.8rem;">Line Items</h3>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Product Code</th>
+                <th>Product Name</th>
+                <th>Warehouse</th>
+                <th>Qty</th>
+                <th>Rate (PKR)</th>
+                <th>Amount (PKR)</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for d in details %}
+            {% widthratio d.qty 1 d.rate as line_amount %}
+            <tr>
+                <td>{{ forloop.counter }}</td>
+                <td>{{ d.product_code.code }}</td>
+                <td>{{ d.product_code.name }}</td>
+                <td>{{ d.warehouse_code.name }}</td>
+                <td>{{ d.qty }}</td>
+                <td>{{ d.rate }}</td>
+                <td>{{ line_amount }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="7">No line items.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+{% endblock %}

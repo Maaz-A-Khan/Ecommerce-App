@@ -1,9 +1,11 @@
-// ── Cart State ────────────────────────────────────────────
-let cart = JSON.parse(localStorage.getItem('cart')) || [];
+// ── Cart State (per-user via localStorage) ─────────────────
+// currentUserId is set in base.html <head> via Django template
+const storageKey = 'cart_' + (typeof currentUserId !== 'undefined' ? currentUserId : 'guest');
+let cart = JSON.parse(localStorage.getItem(storageKey)) || [];
 
 // ── Persist to localStorage ───────────────────────────────
 function saveCart() {
-    localStorage.setItem('cart', JSON.stringify(cart));
+    localStorage.setItem(storageKey, JSON.stringify(cart));
 }
 
 // ── Attach Event Listeners ────────────────────────────────
@@ -103,7 +105,10 @@ function initCheckout() {
     `;
 
     // Populate the hidden input with the cart JSON just before submission
+    // and clear the cart after order is placed
     form.addEventListener('submit', () => {
         cartDataInput.value = JSON.stringify(cart);
+        cart = [];
+        saveCart();
     });
 }

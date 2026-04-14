@@ -1,0 +1,40 @@
+{% extends 'admin_base.html' %}
+
+{% block title %}Orders – Admin{% endblock %}
+{% block nav_orders %}active{% endblock %}
+{% block page_title %}Orders{% endblock %}
+
+{% block content %}
+<section class="admin-card">
+    <div class="admin-card-header">
+        <h2>All Orders</h2>
+    </div>
+
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Entry No</th>
+                <th>User</th>
+                <th>Order Date</th>
+                <th>Order Type</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for o in orders %}
+            <tr>
+                <td>{{ o.entry_no }}</td>
+                <td>{{ o.user.name|default:o.user.username }}</td>
+                <td>{{ o.order_date }}</td>
+                <td><span class="badge badge-{{ o.order_type|lower }}">{{ o.order_type }}</span></td>
+                <td>
+                    <a href="{% url 'core:admin_order_detail' o.idno %}" class="btn btn-sm btn-primary">View Details</a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5">No orders found.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+{% endblock %}

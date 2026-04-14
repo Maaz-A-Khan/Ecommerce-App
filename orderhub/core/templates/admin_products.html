@@ -1,0 +1,120 @@
+{% extends 'admin_base.html' %}
+
+{% block title %}Products & Categories – Admin{% endblock %}
+{% block nav_products %}active{% endblock %}
+{% block page_title %}Products & Categories{% endblock %}
+
+{% block content %}
+<div class="admin-grid">
+
+    <!-- ── Products Section ────────────────────────────── -->
+    <section class="admin-card">
+        <div class="admin-card-header">
+            <h2>Products</h2>
+            <button class="btn btn-primary" onclick="document.getElementById('product-form').classList.toggle('hidden')">
+                + Add Product
+            </button>
+        </div>
+
+        <!-- Add Product Form (hidden by default) -->
+        <form method="post" id="product-form" class="admin-form hidden">
+            {% csrf_token %}
+            <input type="hidden" name="add_product" value="1" />
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="product_code">Code</label>
+                    <input type="text" id="product_code" name="product_code" placeholder="e.g. PRD001" required />
+                </div>
+                <div class="form-group">
+                    <label for="product_name">Name</label>
+                    <input type="text" id="product_name" name="product_name" placeholder="Product name" required />
+                </div>
+                <div class="form-group">
+                    <label for="product_rate">Rate (PKR)</label>
+                    <input type="number" id="product_rate" name="product_rate" step="0.01" min="0" placeholder="0.00" required />
+                </div>
+                <div class="form-group">
+                    <label for="product_category">Category</label>
+                    <select id="product_category" name="product_category" required>
+                        <option value="">Select…</option>
+                        {% for cat in categories %}
+                            <option value="{{ cat.code }}">{{ cat.code }} – {{ cat.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary">Save Product</button>
+        </form>
+
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Code</th>
+                    <th>Name</th>
+                    <th>Rate (PKR)</th>
+                    <th>Category</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in products %}
+                <tr>
+                    <td>{{ p.code }}</td>
+                    <td>{{ p.name }}</td>
+                    <td>{{ p.rate }}</td>
+                    <td>{{ p.category_code.name }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="4">No products found.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </section>
+
+    <!-- ── Categories Section ──────────────────────────── -->
+    <section class="admin-card">
+        <div class="admin-card-header">
+            <h2>Categories</h2>
+            <button class="btn btn-primary" onclick="document.getElementById('category-form').classList.toggle('hidden')">
+                + Add Category
+            </button>
+        </div>
+
+        <!-- Add Category Form (hidden by default) -->
+        <form method="post" id="category-form" class="admin-form hidden">
+            {% csrf_token %}
+            <input type="hidden" name="add_category" value="1" />
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="category_code">Code</label>
+                    <input type="text" id="category_code" name="category_code" placeholder="e.g. CAT01" required />
+                </div>
+                <div class="form-group">
+                    <label for="category_name">Name</label>
+                    <input type="text" id="category_name" name="category_name" placeholder="Category name" required />
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary">Save Category</button>
+        </form>
+
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Code</th>
+                    <th>Name</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for c in categories %}
+                <tr>
+                    <td>{{ c.code }}</td>
+                    <td>{{ c.name }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="2">No categories found.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </section>
+
+</div>
+{% endblock %}
