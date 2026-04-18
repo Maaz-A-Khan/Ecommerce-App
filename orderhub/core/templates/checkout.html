@@ -14,6 +14,18 @@
 <form method="post" action="{% url 'core:checkout' %}" id="checkout-form">
     {% csrf_token %}
     <input type="hidden" name="cart_data" id="cart-data" />
+
+    <div class="checkout-fields">
+        <div class="form-group">
+            <label for="checkout-city">City</label>
+            <input type="text" id="checkout-city" name="city" placeholder="e.g. Karachi" required />
+        </div>
+        <div class="form-group">
+            <label for="checkout-country">Country</label>
+            <input type="text" id="checkout-country" name="country" placeholder="e.g. Pakistan" required />
+        </div>
+    </div>
+
     <button type="submit" class="btn btn-primary">Place Order</button>
 </form>
 {% endblock %}

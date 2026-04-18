@@ -527,3 +527,391 @@ body.app-layout {
     color: var(--accent);
 }
 
+/* ═══════════════════════════════════════════════════════
+   REGISTER PAGE — Modern Glass Card
+═══════════════════════════════════════════════════════ */
+.register-wrapper {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+    background-size: 400% 400%;
+    animation: gradientShift 12s ease infinite;
+    padding: 2rem;
+}
+
+@keyframes gradientShift {
+    0%   { background-position: 0% 50%; }
+    50%  { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+.register-card {
+    width: 100%;
+    max-width: 440px;
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 16px;
+    padding: 2.8rem 2.4rem;
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.35);
+    animation: cardFadeIn 0.5s ease-out;
+}
+
+@keyframes cardFadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.register-card .register-brand {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.register-card .register-brand h1 {
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: #fff;
+    letter-spacing: 1px;
+}
+
+.register-card .register-brand h1 span {
+    color: var(--accent);
+}
+
+.register-card .register-brand p {
+    font-size: 0.88rem;
+    color: rgba(255, 255, 255, 0.55);
+    margin-top: 0.4rem;
+}
+
+.register-card .form-group-reg {
+    margin-bottom: 1.2rem;
+}
+
+.register-card .form-group-reg label {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.7);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.4rem;
+}
+
+.register-card .form-group-reg input {
+    width: 100%;
+    padding: 0.7rem 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.06);
+    color: #fff;
+    font-size: 0.95rem;
+    outline: none;
+    transition: border-color 0.25s, background 0.25s;
+}
+
+.register-card .form-group-reg input::placeholder {
+    color: rgba(255, 255, 255, 0.3);
+}
+
+.register-card .form-group-reg input:focus {
+    border-color: var(--accent);
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.register-card .btn-register {
+    width: 100%;
+    padding: 0.75rem;
+    border: none;
+    border-radius: 8px;
+    background: var(--accent);
+    color: #fff;
+    font-size: 0.95rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.15s;
+    margin-top: 0.5rem;
+}
+
+.register-card .btn-register:hover {
+    background: var(--accent-dark);
+    transform: translateY(-1px);
+}
+
+.register-card .register-footer {
+    text-align: center;
+    margin-top: 1.5rem;
+    font-size: 0.88rem;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.register-card .register-footer a {
+    color: var(--accent);
+    font-weight: 600;
+    transition: color 0.2s;
+}
+
+.register-card .register-footer a:hover {
+    color: #fff;
+}
+
+.register-card .register-error {
+    background: rgba(231, 76, 60, 0.15);
+    border: 1px solid rgba(231, 76, 60, 0.4);
+    color: #ff6b6b;
+    padding: 0.6rem 1rem;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    margin-bottom: 1.2rem;
+    text-align: center;
+}
+
+/* ═══════════════════════════════════════════════════════
+   QUANTITY SELECTOR (Products Page)
+═══════════════════════════════════════════════════════ */
+.qty-selector {
+    display: inline-flex;
+    align-items: center;
+    gap: 0;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    overflow: hidden;
+    margin-right: 0.5rem;
+}
+
+.qty-selector button {
+    width: 30px;
+    height: 30px;
+    border: none;
+    background: #f0f0f0;
+    color: var(--text);
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s;
+}
+
+.qty-selector button:hover {
+    background: #e0e0e0;
+}
+
+.qty-selector input {
+    width: 42px;
+    height: 30px;
+    border: none;
+    border-left: 1px solid #ddd;
+    border-right: 1px solid #ddd;
+    text-align: center;
+    font-size: 0.85rem;
+    font-weight: 600;
+    outline: none;
+    -moz-appearance: textfield;
+}
+
+.qty-selector input::-webkit-outer-spin-button,
+.qty-selector input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+/* ═══════════════════════════════════════════════════════
+   DELETE / DANGER BUTTON
+═══════════════════════════════════════════════════════ */
+.btn-danger {
+    background: transparent;
+    border: 1px solid #e74c3c;
+    color: #e74c3c;
+    padding: 0.3rem 0.7rem;
+    border-radius: 6px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.18s, color 0.18s;
+}
+
+.btn-danger:hover {
+    background: #e74c3c;
+    color: #fff;
+}
+
+/* ═══════════════════════════════════════════════════════
+   CHECKOUT REGION FIELDS
+═══════════════════════════════════════════════════════ */
+.checkout-fields {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1.2rem;
+    background: #fff;
+    padding: 1.2rem;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+}
+
+.checkout-fields .form-group label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    color: var(--muted);
+}
+
+.checkout-fields .form-group input {
+    width: 100%;
+}
+
+/* Cart items container on checkout page */
+#checkout-items {
+    background: #fff;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 1.2rem;
+    margin-bottom: 1.5rem;
+}
+
+#checkout-items p {
+    color: var(--muted);
+    font-size: 0.92rem;
+    padding: 1.5rem 0;
+    text-align: center;
+}
+
+#checkout-items p a {
+    color: var(--accent);
+    font-weight: 600;
+}
+
+#checkout-items .data-table tfoot td {
+    padding-top: 1rem;
+    border-top: 2px solid #e0e0e0;
+    border-bottom: none;
+    font-size: 0.95rem;
+}
+
+#checkout-form {
+    margin-top: 1.5rem;
+}
+
+#checkout-form .btn-primary {
+    padding: 0.7rem 2rem;
+    font-size: 0.95rem;
+}
+
+/* ═══════════════════════════════════════════════════════
+   CART REMOVE BUTTON
+═══════════════════════════════════════════════════════ */
+.btn-remove-cart {
+    background: transparent;
+    border: none;
+    color: #e74c3c;
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    transition: background 0.15s, color 0.15s;
+}
+
+.btn-remove-cart:hover {
+    background: #fde8e8;
+    color: #c0392b;
+}
+
+/* ═══════════════════════════════════════════════════════
+   CUSTOMER ORDER HISTORY PAGE
+═══════════════════════════════════════════════════════ */
+.customer-dashboard {
+    max-width: 900px;
+}
+
+.section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.8rem;
+    gap: 1rem;
+}
+
+.section-title {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--text);
+    margin: 0 0 0.3rem 0;
+}
+
+.section-subtitle {
+    font-size: 0.88rem;
+    color: var(--muted);
+    margin: 0;
+}
+
+.table-wrapper {
+    background: #fff;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 0.5rem 0;
+    overflow-x: auto;
+}
+
+.badge-info {
+    background: #e8f0fe;
+    color: #1a73e8;
+}
+
+.btn-secondary {
+    background: transparent;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    padding: 0.35rem 0.9rem;
+    border-radius: 6px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.18s, color 0.18s;
+}
+
+.btn-secondary:hover {
+    background: var(--accent);
+    color: #fff;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 3.5rem 2rem;
+    background: #fff;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+}
+
+.empty-state svg {
+    color: var(--muted);
+    opacity: 0.4;
+    margin-bottom: 1.2rem;
+}
+
+.empty-state h3 {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 0.5rem;
+}
+
+.empty-state p {
+    font-size: 0.9rem;
+    color: var(--muted);
+    margin-bottom: 1.5rem;
+    max-width: 360px;
+    margin-left: auto;
+    margin-right: auto;
+    line-height: 1.5;
+}
+
+.empty-state .btn {
+    margin-top: 0.5rem;
+}

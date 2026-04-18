@@ -38,7 +38,25 @@
     <section class="admin-card">
         <div class="admin-card-header">
             <h2>Suppliers</h2>
+            <button class="btn btn-primary"
+                onclick="document.getElementById('supplier-form').classList.toggle('hidden')">
+                + Add Supplier
+            </button>
         </div>
+
+        <!-- Add Supplier Form (hidden by default) -->
+        <form method="post" id="supplier-form" class="admin-form hidden">
+            {% csrf_token %}
+            <input type="hidden" name="add_supplier" value="1" />
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="supplier_name">Supplier Name</label>
+                    <input type="text" id="supplier_name" name="supplier_name" placeholder="e.g. ABC Traders" required />
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary">Save Supplier</button>
+        </form>
+
         <table class="data-table">
             <thead>
                 <tr>

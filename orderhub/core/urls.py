@@ -16,6 +16,8 @@ urlpatterns = [
 
     # ── Admin Panel ──────────────────────────────────────
     path('admin-panel/products/',          views.admin_products_view,      name='admin_products'),
+    path('admin-panel/products/delete/<str:code>/', views.delete_product_view,  name='delete_product'),
+    path('admin-panel/categories/delete/<str:code>/', views.delete_category_view, name='delete_category'),
     path('admin-panel/orders/',            views.admin_orders_view,        name='admin_orders'),
     path('admin-panel/orders/<int:idno>/', views.admin_order_detail_view,  name='admin_order_detail'),
     path('admin-panel/accounts/',          views.admin_accounts_view,      name='admin_accounts'),

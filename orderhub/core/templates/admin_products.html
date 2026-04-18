@@ -23,10 +23,6 @@
             <input type="hidden" name="add_product" value="1" />
             <div class="form-row">
                 <div class="form-group">
-                    <label for="product_code">Code</label>
-                    <input type="text" id="product_code" name="product_code" placeholder="e.g. PRD001" required />
-                </div>
-                <div class="form-group">
                     <label for="product_name">Name</label>
                     <input type="text" id="product_name" name="product_name" placeholder="Product name" required />
                 </div>
@@ -55,6 +51,7 @@
                     <th>Name</th>
                     <th>Rate (PKR)</th>
                     <th>Category</th>
+                    <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -64,10 +61,17 @@
                     <td>{{ p.name }}</td>
                     <td>{{ p.rate }}</td>
                     <td>{{ p.category_code.name }}</td>
+                    <td>
+                        <form method="post" action="{% url 'core:delete_product' p.code %}" style="display:inline;"
+                              onsubmit="return confirm('Delete product {{ p.code }}?');">
+                            {% csrf_token %}
+                            <button type="submit" class="btn-danger">Delete</button>
+                        </form>
+                    </td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="4">No products found.</td>
+                    <td colspan="5">No products found.</td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -90,10 +94,6 @@
             <input type="hidden" name="add_category" value="1" />
             <div class="form-row">
                 <div class="form-group">
-                    <label for="category_code">Code</label>
-                    <input type="text" id="category_code" name="category_code" placeholder="e.g. CAT01" required />
-                </div>
-                <div class="form-group">
                     <label for="category_name">Name</label>
                     <input type="text" id="category_name" name="category_name" placeholder="Category name" required />
                 </div>
@@ -106,6 +106,7 @@
                 <tr>
                     <th>Code</th>
                     <th>Name</th>
+                    <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -113,10 +114,17 @@
                 <tr>
                     <td>{{ c.code }}</td>
                     <td>{{ c.name }}</td>
+                    <td>
+                        <form method="post" action="{% url 'core:delete_category' c.code %}" style="display:inline;"
+                              onsubmit="return confirm('Delete category {{ c.code }}?');">
+                            {% csrf_token %}
+                            <button type="submit" class="btn-danger">Delete</button>
+                        </form>
+                    </td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="2">No categories found.</td>
+                    <td colspan="3">No categories found.</td>
                 </tr>
                 {% endfor %}
             </tbody>

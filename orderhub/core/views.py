@@ -74,6 +74,8 @@ def order_checkout_view(request):
 
     if request.method == 'POST':
         cart_json = request.POST.get('cart_data', '[]')
+        city      = request.POST.get('city', '').strip()
+        country   = request.POST.get('country', '').strip()
 
         try:
             cart_items = json.loads(cart_json)
@@ -83,6 +85,10 @@ def order_checkout_view(request):
 
         if not cart_items:
             messages.error(request, 'Your cart is empty.')
+            return redirect('core:checkout')
+
+        if not city or not country:
+            messages.error(request, 'City and Country are required.')
             return redirect('core:checkout')
 
         with connection.cursor() as cursor:
@@ -98,56 +104,72 @@ def order_checkout_view(request):
         try:
             with transaction.atomic():
                 with connection.cursor() as cursor:
-                    cursor.execute("SELECT MAX(idno) FROM order_master")
-                    row = cursor.fetchone()
-                last_idno = row[0] if row[0] is not None else 0
-                next_num  = last_idno + 1
-                entry_no  = f"ORD-{next_num:05d}"
-                
-                if not request.user.account_code:
-                    with connection.cursor() as cursor:
+                    # Step A: Region handling
+                    cursor.execute(
+                        """
+                        SELECT idno FROM region
+                        WHERE LOWER(city) = LOWER(%s) AND LOWER(country) = LOWER(%s)
+                        """,
+                        [city, country]
+                    )
+                    region_row = cursor.fetchone()
+                    if region_row:
+                        region_idno = region_row[0]
+                    else:
+                        cursor.execute(
+                            "INSERT INTO region (city, country) VALUES (%s, %s)",
+                            [city, country]
+                        )
+                        region_idno = cursor.lastrowid
+
+                    # Step B: Lazy account initialization
+                    if not request.user.account_code:
                         cursor.execute(
                             """
                             SELECT code
                             FROM chart_of_account
-                            WHERE account_type = 'Customer' AND code LIKE 'CUST-%'
+                            WHERE account_type = 'Customer' AND code LIKE 'CUST-%%'
                             ORDER BY CAST(SUBSTR(code, 6) AS INTEGER) DESC
                             LIMIT 1
                             """
                         )
                         last_code_row = cursor.fetchone()
 
-                    if last_code_row is None:
-                        new_code = 'CUST-1001'
-                    else:
-                        try:
-                            last_int = int(last_code_row[0].split('-')[1])
-                        except (IndexError, ValueError):
-                            last_int = 1000
-                        new_code = f"CUST-{last_int + 1}"
+                        if last_code_row is None:
+                            new_code = 'CUST-1001'
+                        else:
+                            try:
+                                last_int = int(last_code_row[0].split('-')[1])
+                            except (IndexError, ValueError):
+                                last_int = 1000
+                            new_code = f"CUST-{last_int + 1}"
 
-                    with connection.cursor() as cursor:
                         cursor.execute(
                             """
                             INSERT INTO chart_of_account (code, name, account_type, region_idno)
-                            VALUES (%s, %s, 'Customer', NULL)
+                            VALUES (%s, %s, 'Customer', %s)
                             """,
-                            [new_code, request.user.username]
+                            [new_code, request.user.username, region_idno]
                         )
-
-                    with connection.cursor() as cursor:
                         cursor.execute(
-                            """
-                            UPDATE user
-                            SET account_code = %s
-                            WHERE id = %s
-                            """,
+                            "UPDATE user SET account_code = %s WHERE id = %s",
                             [new_code, request.user.id]
                         )
+                        request.user.account_code_id = new_code
+                    else:
+                        # Update existing account with latest region
+                        cursor.execute(
+                            "UPDATE chart_of_account SET region_idno = %s WHERE code = %s",
+                            [region_idno, request.user.account_code_id]
+                        )
 
-                    request.user.account_code_id = new_code
+                    # Step C: Generate entry_no and insert order_master
+                    cursor.execute("SELECT MAX(idno) FROM order_master")
+                    row = cursor.fetchone()
+                    last_idno = row[0] if row[0] is not None else 0
+                    next_num  = last_idno + 1
+                    entry_no  = f"ORD-{next_num:05d}"
 
-                with connection.cursor() as cursor:
                     cursor.execute(
                         """
                         INSERT INTO order_master (user_id, order_type, entry_no, order_date)
@@ -158,12 +180,12 @@ def order_checkout_view(request):
                     cursor.execute("SELECT last_insert_rowid()")
                     om_idno = cursor.fetchone()[0]
 
-                for item in cart_items:
-                    item_code = item['code']
-                    cart_qty  = int(item['quantity'])
-                    cart_rate = Decimal(str(item['rate']))
+                    # Step D: Process cart items (bundle unpacking)
+                    for item in cart_items:
+                        item_code = item['code']
+                        cart_qty  = int(item['quantity'])
+                        cart_rate = Decimal(str(item['rate']))
 
-                    with connection.cursor() as cursor:
                         cursor.execute(
                             """
                             SELECT code
@@ -174,8 +196,7 @@ def order_checkout_view(request):
                         )
                         bundle_row = cursor.fetchone()
 
-                    if bundle_row is None:
-                        with connection.cursor() as cursor:
+                        if bundle_row is None:
                             cursor.execute(
                                 """
                                 SELECT COALESCE(SUM(receive), 0) - COALESCE(SUM(issue), 0)
@@ -185,15 +206,14 @@ def order_checkout_view(request):
                                 [item_code]
                             )
                             stock_result = cursor.fetchone()
-                        available = stock_result[0] if stock_result[0] is not None else 0
-                        if available < cart_qty:
-                            messages.error(
-                                request,
-                                f'Product "{item.get("name", item_code)}" has insufficient stock.'
-                            )
-                            raise Exception('stock_failure')
+                            available = stock_result[0] if stock_result[0] is not None else 0
+                            if available < cart_qty:
+                                messages.error(
+                                    request,
+                                    f'Product "{item.get("name", item_code)}" has insufficient stock.'
+                                )
+                                raise Exception('stock_failure')
 
-                        with connection.cursor() as cursor:
                             cursor.execute(
                                 """
                                 INSERT INTO order_detail
@@ -210,8 +230,7 @@ def order_checkout_view(request):
                                 """,
                                 [om_idno, warehouse_code, item_code, cart_qty, 0]
                             )
-                    else:
-                        with connection.cursor() as cursor:
+                        else:
                             cursor.execute(
                                 """
                                 SELECT bi.product_code, p.rate, pb.discount_percentage, bi.qty_included
@@ -224,11 +243,10 @@ def order_checkout_view(request):
                             )
                             bundle_products = cursor.fetchall()
 
-                        for bp_code, bp_rate, bp_discount, bp_qty_included in bundle_products:
-                            required_qty    = cart_qty * bp_qty_included
-                            discounted_rate = Decimal(str(bp_rate)) * (1 - Decimal(str(bp_discount)) / 100)
+                            for bp_code, bp_rate, bp_discount, bp_qty_included in bundle_products:
+                                required_qty    = cart_qty * bp_qty_included
+                                discounted_rate = Decimal(str(bp_rate)) * (1 - Decimal(str(bp_discount)) / 100)
 
-                            with connection.cursor() as cursor:
                                 cursor.execute(
                                     """
                                     SELECT COALESCE(SUM(receive), 0) - COALESCE(SUM(issue), 0)
@@ -238,15 +256,14 @@ def order_checkout_view(request):
                                     [bp_code]
                                 )
                                 bp_stock = cursor.fetchone()
-                            bp_available = bp_stock[0] if bp_stock[0] is not None else 0
-                            if bp_available < required_qty:
-                                messages.error(
-                                    request,
-                                    f'Bundle item "{bp_code}" has insufficient stock for bundle "{item_code}".'
-                                )
-                                raise Exception('stock_failure')
+                                bp_available = bp_stock[0] if bp_stock[0] is not None else 0
+                                if bp_available < required_qty:
+                                    messages.error(
+                                        request,
+                                        f'Bundle item "{bp_code}" has insufficient stock for bundle "{item_code}".'
+                                    )
+                                    raise Exception('stock_failure')
 
-                            with connection.cursor() as cursor:
                                 cursor.execute(
                                     """
                                     INSERT INTO order_detail
@@ -376,47 +393,77 @@ def customer_order_detail_view(request, idno):
     })
 
 
+# ═══════════════════════════════════════════════════════════
+#  ADMIN VIEWS
+# ═══════════════════════════════════════════════════════════
+
 @login_required(login_url='core:login')
 @admin_required
 def admin_products_view(request):
     if request.method == 'POST' and 'add_product' in request.POST:
-        code = request.POST.get('product_code', '').strip()
         name = request.POST.get('product_name', '').strip()
         rate = request.POST.get('product_rate', '0')
         cat  = request.POST.get('product_category', '')
 
-        if code and name and cat:
+        if name and cat:
             with connection.cursor() as cursor:
-                cursor.execute("SELECT 1 FROM product WHERE code = %s LIMIT 1", [code])
-                if cursor.fetchone():
-                    messages.error(request, f'Product code "{code}" already exists.')
+                cursor.execute("SELECT 1 FROM category WHERE code = %s LIMIT 1", [cat])
+                if not cursor.fetchone():
+                    raise Http404("Category not found")
+
+                cursor.execute(
+                    """
+                    SELECT code FROM product
+                    WHERE code LIKE 'PRD-%%'
+                    ORDER BY CAST(SUBSTR(code, 5) AS INTEGER) DESC
+                    LIMIT 1
+                    """
+                )
+                last_row = cursor.fetchone()
+                if last_row is None:
+                    code = 'PRD-001'
                 else:
-                    cursor.execute("SELECT 1 FROM category WHERE code = %s LIMIT 1", [cat])
-                    if not cursor.fetchone():
-                        raise Http404("Category not found")
-                    
-                    cursor.execute(
-                        "INSERT INTO product (code, name, rate, category_code) VALUES (%s, %s, %s, %s)",
-                        [code, name, rate, cat]
-                    )
-                    messages.success(request, f'Product "{name}" added.')
+                    try:
+                        last_int = int(last_row[0].split('-')[1])
+                    except (IndexError, ValueError):
+                        last_int = 0
+                    code = f"PRD-{last_int + 1:03d}"
+
+                cursor.execute(
+                    "INSERT INTO product (code, name, rate, category_code) VALUES (%s, %s, %s, %s)",
+                    [code, name, rate, cat]
+                )
+                messages.success(request, f'Product "{name}" added as {code}.')
         else:
-            messages.error(request, 'All product fields are required.')
+            messages.error(request, 'Product name, rate, and category are required.')
         return redirect('core:admin_products')
 
     if request.method == 'POST' and 'add_category' in request.POST:
-        code = request.POST.get('category_code', '').strip()
         name = request.POST.get('category_name', '').strip()
-        if code and name:
+        if name:
             with connection.cursor() as cursor:
-                cursor.execute("SELECT 1 FROM category WHERE code = %s LIMIT 1", [code])
-                if cursor.fetchone():
-                    messages.error(request, f'Category code "{code}" already exists.')
+                cursor.execute(
+                    """
+                    SELECT code FROM category
+                    WHERE code LIKE 'CAT-%%'
+                    ORDER BY CAST(SUBSTR(code, 5) AS INTEGER) DESC
+                    LIMIT 1
+                    """
+                )
+                last_row = cursor.fetchone()
+                if last_row is None:
+                    code = 'CAT-001'
                 else:
-                    cursor.execute("INSERT INTO category (code, name) VALUES (%s, %s)", [code, name])
-                    messages.success(request, f'Category "{name}" added.')
+                    try:
+                        last_int = int(last_row[0].split('-')[1])
+                    except (IndexError, ValueError):
+                        last_int = 0
+                    code = f"CAT-{last_int + 1:03d}"
+
+                cursor.execute("INSERT INTO category (code, name) VALUES (%s, %s)", [code, name])
+                messages.success(request, f'Category "{name}" added as {code}.')
         else:
-            messages.error(request, 'Category code and name are required.')
+            messages.error(request, 'Category name is required.')
         return redirect('core:admin_products')
 
     with connection.cursor() as cursor:
@@ -446,6 +493,34 @@ def admin_products_view(request):
         'categories': categories,
     }
     return render(request, 'admin_products.html', context)
+
+
+@login_required(login_url='core:login')
+@admin_required
+def delete_product_view(request, code):
+    if request.method == 'POST':
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1 FROM stock WHERE product_code = %s LIMIT 1", [code])
+            if cursor.fetchone():
+                messages.error(request, f'Cannot delete product "{code}" — it has stock records.')
+            else:
+                cursor.execute("DELETE FROM product WHERE code = %s", [code])
+                messages.success(request, f'Product "{code}" deleted.')
+    return redirect('core:admin_products')
+
+
+@login_required(login_url='core:login')
+@admin_required
+def delete_category_view(request, code):
+    if request.method == 'POST':
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1 FROM product WHERE category_code = %s LIMIT 1", [code])
+            if cursor.fetchone():
+                messages.error(request, f'Cannot delete category "{code}" — it still has products.')
+            else:
+                cursor.execute("DELETE FROM category WHERE code = %s", [code])
+                messages.success(request, f'Category "{code}" deleted.')
+    return redirect('core:admin_products')
 
 
 @login_required(login_url='core:login')
@@ -527,6 +602,41 @@ def admin_order_detail_view(request, idno):
 @login_required(login_url='core:login')
 @admin_required
 def admin_accounts_view(request):
+    if request.method == 'POST' and 'add_supplier' in request.POST:
+        name = request.POST.get('supplier_name', '').strip()
+        if name:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    SELECT code
+                    FROM chart_of_account
+                    WHERE account_type = 'Supplier' AND code LIKE 'SUPP-%%'
+                    ORDER BY CAST(SUBSTR(code, 6) AS INTEGER) DESC
+                    LIMIT 1
+                    """
+                )
+                last_row = cursor.fetchone()
+                if last_row is None:
+                    new_code = 'SUPP-1001'
+                else:
+                    try:
+                        last_int = int(last_row[0].split('-')[1])
+                    except (IndexError, ValueError):
+                        last_int = 1000
+                    new_code = f"SUPP-{last_int + 1}"
+
+                cursor.execute(
+                    """
+                    INSERT INTO chart_of_account (code, name, account_type, region_idno)
+                    VALUES (%s, %s, 'Supplier', NULL)
+                    """,
+                    [new_code, name]
+                )
+                messages.success(request, f'Supplier "{name}" added as {new_code}.')
+        else:
+            messages.error(request, 'Supplier name is required.')
+        return redirect('core:admin_accounts')
+
     with connection.cursor() as cursor:
         cursor.execute("SELECT code, name, account_type FROM chart_of_account WHERE account_type = 'Customer' ORDER BY code")
         customers = [{'code': r[0], 'name': r[1], 'account_type': r[2]} for r in cursor.fetchall()]
@@ -547,7 +657,6 @@ def admin_stock_view(request):
         supplier_code = request.POST.get('supplier', '')
         product_code  = request.POST.get('product', '')
         qty           = int(request.POST.get('quantity', 0))
-        rate          = Decimal(request.POST.get('rate', '0'))
 
         if supplier_code and product_code and qty > 0:
             with transaction.atomic():
@@ -556,11 +665,12 @@ def admin_stock_view(request):
                     if not cursor.fetchone():
                         raise Http404("Supplier not found")
                     
-                    cursor.execute("SELECT name FROM product WHERE code = %s LIMIT 1", [product_code])
+                    cursor.execute("SELECT name, rate FROM product WHERE code = %s LIMIT 1", [product_code])
                     prod_row = cursor.fetchone()
                     if not prod_row:
                         raise Http404("Product not found")
                     prod_name = prod_row[0]
+                    rate      = prod_row[1]
                     
                     cursor.execute("SELECT code FROM warehouse LIMIT 1")
                     wh_row = cursor.fetchone()

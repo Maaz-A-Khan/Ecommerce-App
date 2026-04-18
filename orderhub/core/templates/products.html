@@ -14,6 +14,7 @@
                 <th>Code</th>
                 <th>Name</th>
                 <th>Rate (PKR)</th>
+                <th>Quantity</th>
                 <th>Action</th>
             </tr>
         </thead>
@@ -24,6 +25,13 @@
                 <td>{{ product.name }}</td>
                 <td>{{ product.rate }}</td>
                 <td>
+                    <div class="qty-selector">
+                        <button type="button" onclick="changeQty('{{ product.code }}', -1)">−</button>
+                        <input type="number" id="qty-{{ product.code }}" value="1" min="1" max="999" />
+                        <button type="button" onclick="changeQty('{{ product.code }}', 1)">+</button>
+                    </div>
+                </td>
+                <td>
                     <button class="btn btn-sm btn-primary add-to-cart"
                             data-code="{{ product.code }}"
                             data-name="{{ product.name }}"
@@ -33,13 +41,13 @@
                 </td>
             </tr>
             {% empty %}
-                <tr><td colspan="4">No products found.</td></tr>
+                <tr><td colspan="5">No products found.</td></tr>
             {% endfor %}
         </tbody>
     </table>
 </div>
 
-<!-- Cart summary (populated by main.js in Phase 8) -->
+<!-- Cart summary (populated by main.js) -->
 <div class="cart-summary">
     <h3>Cart Total: PKR <span id="cart-total">0.00</span></h3>
     <a href="{% url 'core:checkout' %}" class="btn btn-primary">Proceed to Checkout</a>

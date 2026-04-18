@@ -1,16 +1,45 @@
-{% extends 'base_auth.html' %}
-{% block title %}Register – OrderHub{% endblock %}
-{% block content %}
-<div class="auth-card">
-    <h2>Create Account</h2>
-    {% if error %}<p style="color:red">{{ error }}</p>{% endif %}
-    <form method="POST">
-        {% csrf_token %}
-        <input type="text"     name="username"  placeholder="Username" required>
-        <input type="text"     name="name"     placeholder="Full Name">
-        <input type="password" name="password" placeholder="Password" required>
-        <button type="submit" class="btn btn-primary">Register</button>
-    </form>
-    <p>Already have an account? <a href="{% url 'core:login' %}">Login</a></p>
-</div>
-{% endblock %}
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Register – OrderHub</title>
+    <link rel="stylesheet" href="{% static 'style.css' %}" />
+</head>
+<body>
+    <div class="register-wrapper">
+        <div class="register-card">
+            <div class="register-brand">
+                <h1>Order<span>Hub</span></h1>
+                <p>Create your account to get started</p>
+            </div>
+
+            {% if error %}
+            <div class="register-error">{{ error }}</div>
+            {% endif %}
+
+            <form method="POST">
+                {% csrf_token %}
+                <div class="form-group-reg">
+                    <label for="reg-username">Username</label>
+                    <input type="text" id="reg-username" name="username" placeholder="e.g. john_doe" required autofocus />
+                </div>
+                <div class="form-group-reg">
+                    <label for="reg-name">Full Name</label>
+                    <input type="text" id="reg-name" name="name" placeholder="John Doe" />
+                </div>
+                <div class="form-group-reg">
+                    <label for="reg-password">Password</label>
+                    <input type="password" id="reg-password" name="password" placeholder="••••••••" required />
+                </div>
+                <button type="submit" class="btn-register">Create Account</button>
+            </form>
+
+            <p class="register-footer">
+                Already have an account? <a href="{% url 'core:login' %}">Sign In</a>
+            </p>
+        </div>
+    </div>
+</body>
+</html>
