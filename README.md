@@ -67,17 +67,74 @@ erDiagram
     warehouse ||--o{ order_detail : "warehouse_code"
     warehouse ||--o{ stock : "warehouse_code"
 
-    region { int idno PK; string city; string country }
-    user { int id PK; string username; string name; string role; string account_code FK }
-    chart_of_account { string code PK; string name; string account_type; int region_idno FK }
-    category { string code PK; string name }
-    product { string code PK; string name; decimal rate; string category_code FK }
-    product_bundle { string code PK; string name; decimal discount_percentage; bool is_active }
-    bundle_item { int idno PK; string bundle_code FK; string product_code FK; int qty_included }
-    warehouse { string code PK; string name }
-    order_master { int idno PK; int user_id FK; string order_type; string entry_no; date order_date }
-    order_detail { int idno PK; int order_master_idno FK; string product_code FK; string warehouse_code FK; int qty; decimal rate }
-    stock { int idno PK; int order_master_idno FK; string warehouse_code FK; string product_code FK; int issue; int receive; date date }
+    region {
+        int idno PK
+        string city
+        string country
+    }
+    user {
+        int id PK
+        string username
+        string name
+        string role
+        string account_code FK
+    }
+    chart_of_account {
+        string code PK
+        string name
+        string account_type
+        int region_idno FK
+    }
+    category {
+        string code PK
+        string name
+    }
+    product {
+        string code PK
+        string name
+        decimal rate
+        string category_code FK
+    }
+    product_bundle {
+        string code PK
+        string name
+        decimal discount_percentage
+        bool is_active
+    }
+    bundle_item {
+        int idno PK
+        string bundle_code FK
+        string product_code FK
+        int qty_included
+    }
+    warehouse {
+        string code PK
+        string name
+    }
+    order_master {
+        int idno PK
+        int user_id FK
+        string order_type
+        string entry_no
+        date order_date
+    }
+    order_detail {
+        int idno PK
+        int order_master_idno FK
+        string product_code FK
+        string warehouse_code FK
+        int qty
+        decimal rate
+    }
+    stock {
+        int idno PK
+        int order_master_idno FK
+        string warehouse_code FK
+        string product_code FK
+        int issue
+        int receive
+        date date
+    }
 ```
 
 ### Auto-Generated Code Sequences
