@@ -75,10 +75,24 @@ WSGI_APPLICATION = 'orderhub.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
+# --- Old SQLite Configuration (commented out) ---
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.sqlite3',
+#         'NAME': BASE_DIR / 'db.sqlite3',
+#     }
+# }
+
+# --- PostgreSQL Configuration ---
+# Replace the placeholder values below with your actual pgAdmin credentials.
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'ecommerce_orderhub',
+        'USER': 'orderhub_user',
+        'PASSWORD': 'secure_orderhub_123',
+        'HOST': 'localhost',
+        'PORT': '5432',
     }
 }
 

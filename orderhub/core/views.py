@@ -117,10 +117,10 @@ def order_checkout_view(request):
                         region_idno = region_row[0]
                     else:
                         cursor.execute(
-                            "INSERT INTO region (city, country) VALUES (%s, %s)",
+                            "INSERT INTO region (city, country) VALUES (%s, %s) RETURNING idno",
                             [city, country]
                         )
-                        region_idno = cursor.lastrowid
+                        region_idno = cursor.fetchone()[0]
 
                     # Step B: Lazy account initialization
                     if not request.user.account_code:
@@ -129,7 +129,7 @@ def order_checkout_view(request):
                             SELECT code
                             FROM chart_of_account
                             WHERE account_type = 'Customer' AND code LIKE 'CUST-%%'
-                            ORDER BY CAST(SUBSTR(code, 6) AS INTEGER) DESC
+                            ORDER BY CAST(SUBSTRING(code FROM 6) AS INTEGER) DESC
                             LIMIT 1
                             """
                         )
@@ -152,7 +152,7 @@ def order_checkout_view(request):
                             [new_code, request.user.username, region_idno]
                         )
                         cursor.execute(
-                            "UPDATE user SET account_code = %s WHERE id = %s",
+                            "UPDATE \"user\" SET account_code = %s WHERE id = %s",
                             [new_code, request.user.id]
                         )
                         request.user.account_code_id = new_code
@@ -173,11 +173,11 @@ def order_checkout_view(request):
                     cursor.execute(
                         """
                         INSERT INTO order_master (user_id, order_type, entry_no, order_date)
-                        VALUES (%s, %s, %s, DATE('now'))
+                        VALUES (%s, %s, %s, CURRENT_DATE)
+                        RETURNING idno
                         """,
                         [request.user.id, order_type, entry_no]
                     )
-                    cursor.execute("SELECT last_insert_rowid()")
                     om_idno = cursor.fetchone()[0]
 
                     # Step D: Process cart items (bundle unpacking)
@@ -190,7 +190,7 @@ def order_checkout_view(request):
                             """
                             SELECT code
                             FROM product_bundle
-                            WHERE code = %s AND is_active = 1
+                            WHERE code = %s AND is_active = TRUE
                             """,
                             [item_code]
                         )
@@ -226,7 +226,7 @@ def order_checkout_view(request):
                                 """
                                 INSERT INTO stock
                                     (order_master_idno, warehouse_code, product_code, issue, receive, date)
-                                VALUES (%s, %s, %s, %s, %s, DATE('now'))
+                                VALUES (%s, %s, %s, %s, %s, CURRENT_DATE)
                                 """,
                                 [om_idno, warehouse_code, item_code, cart_qty, 0]
                             )
@@ -276,7 +276,7 @@ def order_checkout_view(request):
                                     """
                                     INSERT INTO stock
                                         (order_master_idno, warehouse_code, product_code, issue, receive, date)
-                                    VALUES (%s, %s, %s, %s, %s, DATE('now'))
+                                    VALUES (%s, %s, %s, %s, %s, CURRENT_DATE)
                                     """,
                                     [om_idno, warehouse_code, bp_code, required_qty, 0]
                                 )
@@ -299,15 +299,15 @@ def register_view(request):
         password = request.POST.get('password')
 
         with connection.cursor() as cursor:
-            cursor.execute("SELECT 1 FROM user WHERE username = %s LIMIT 1", [username])
+            cursor.execute("SELECT 1 FROM \"user\" WHERE username = %s LIMIT 1", [username])
             if cursor.fetchone():
                 return render(request, 'register.html', {'error': 'Username already exists'})
 
             hashed_password = make_password(password)
             cursor.execute(
                 """
-                INSERT INTO user (username, name, password, is_superuser, is_staff, is_active, first_name, last_name, email, date_joined, role)
-                VALUES (%s, %s, %s, 0, 0, 1, '', '', '', DATETIME('now'), 'customer')
+                INSERT INTO "user" (username, name, password, is_superuser, is_staff, is_active, first_name, last_name, email, date_joined, role)
+                VALUES (%s, %s, %s, FALSE, FALSE, TRUE, '', '', '', NOW(), 'customer')
                 """,
                 [username, name, hashed_password]
             )
@@ -415,7 +415,7 @@ def admin_products_view(request):
                     """
                     SELECT code FROM product
                     WHERE code LIKE 'PRD-%%'
-                    ORDER BY CAST(SUBSTR(code, 5) AS INTEGER) DESC
+                    ORDER BY CAST(SUBSTRING(code FROM 5) AS INTEGER) DESC
                     LIMIT 1
                     """
                 )
@@ -446,7 +446,7 @@ def admin_products_view(request):
                     """
                     SELECT code FROM category
                     WHERE code LIKE 'CAT-%%'
-                    ORDER BY CAST(SUBSTR(code, 5) AS INTEGER) DESC
+                    ORDER BY CAST(SUBSTRING(code FROM 5) AS INTEGER) DESC
                     LIMIT 1
                     """
                 )
@@ -531,7 +531,7 @@ def admin_orders_view(request):
             """
             SELECT o.idno, o.entry_no, o.order_type, o.order_date, u.name, u.username
             FROM order_master o
-            JOIN user u ON o.user_id = u.id
+            JOIN "user" u ON o.user_id = u.id
             ORDER BY o.order_date DESC, o.idno DESC
             """
         )
@@ -556,7 +556,7 @@ def admin_order_detail_view(request, idno):
             """
             SELECT o.idno, o.entry_no, o.order_type, o.order_date, u.name, u.username
             FROM order_master o
-            JOIN user u ON o.user_id = u.id
+            JOIN "user" u ON o.user_id = u.id
             WHERE o.idno = %s
             """,
             [idno]
@@ -611,7 +611,7 @@ def admin_accounts_view(request):
                     SELECT code
                     FROM chart_of_account
                     WHERE account_type = 'Supplier' AND code LIKE 'SUPP-%%'
-                    ORDER BY CAST(SUBSTR(code, 6) AS INTEGER) DESC
+                    ORDER BY CAST(SUBSTRING(code FROM 6) AS INTEGER) DESC
                     LIMIT 1
                     """
                 )
@@ -687,11 +687,11 @@ def admin_stock_view(request):
                     cursor.execute(
                         """
                         INSERT INTO order_master (user_id, order_type, entry_no, order_date)
-                        VALUES (%s, 'Restock Order', %s, DATE('now'))
+                        VALUES (%s, 'Restock Order', %s, CURRENT_DATE)
+                        RETURNING idno
                         """,
                         [request.user.id, entry_no]
                     )
-                    cursor.execute("SELECT last_insert_rowid()")
                     om_idno = cursor.fetchone()[0]
 
                     cursor.execute(
@@ -705,7 +705,7 @@ def admin_stock_view(request):
                     cursor.execute(
                         """
                         INSERT INTO stock (order_master_idno, warehouse_code, product_code, issue, receive, date)
-                        VALUES (%s, %s, %s, 0, %s, DATE('now'))
+                        VALUES (%s, %s, %s, 0, %s, CURRENT_DATE)
                         """,
                         [om_idno, default_wh, product_code, qty]
                     )
