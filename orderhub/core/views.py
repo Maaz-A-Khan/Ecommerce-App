@@ -632,6 +632,15 @@ def admin_accounts_view(request):
                     """,
                     [new_code, name]
                 )
+                unusable_pw = make_password(None)
+                cursor.execute(
+                    """
+                    INSERT INTO "user" (username, name, password, is_superuser, is_staff, is_active,
+                                        first_name, last_name, email, date_joined, role, account_code)
+                    VALUES (%s, %s, %s, FALSE, FALSE, FALSE, '', '', '', NOW(), 'supplier', %s)
+                    """,
+                    [new_code, name, unusable_pw, new_code]
+                )
                 messages.success(request, f'Supplier "{name}" added as {new_code}.')
         else:
             messages.error(request, 'Supplier name is required.')
@@ -661,17 +670,22 @@ def admin_stock_view(request):
         if supplier_code and product_code and qty > 0:
             with transaction.atomic():
                 with connection.cursor() as cursor:
-                    cursor.execute("SELECT 1 FROM chart_of_account WHERE code = %s LIMIT 1", [supplier_code])
-                    if not cursor.fetchone():
+                    cursor.execute(
+                        "SELECT id FROM \"user\" WHERE account_code = %s AND role = 'supplier' LIMIT 1",
+                        [supplier_code]
+                    )
+                    supplier_user_row = cursor.fetchone()
+                    if not supplier_user_row:
                         raise Http404("Supplier not found")
-                    
+                    supplier_user_id = supplier_user_row[0]
+
                     cursor.execute("SELECT name, rate FROM product WHERE code = %s LIMIT 1", [product_code])
                     prod_row = cursor.fetchone()
                     if not prod_row:
                         raise Http404("Product not found")
                     prod_name = prod_row[0]
                     rate      = prod_row[1]
-                    
+
                     cursor.execute("SELECT code FROM warehouse LIMIT 1")
                     wh_row = cursor.fetchone()
                     if not wh_row:
@@ -683,14 +697,14 @@ def admin_stock_view(request):
                     last_idno = last_order_row[0] if last_order_row[0] is not None else 0
                     next_num = last_idno + 1
                     entry_no = f"RST-{next_num:05d}"
-                    
+
                     cursor.execute(
                         """
                         INSERT INTO order_master (user_id, order_type, entry_no, order_date)
                         VALUES (%s, 'Restock Order', %s, CURRENT_DATE)
                         RETURNING idno
                         """,
-                        [request.user.id, entry_no]
+                        [supplier_user_id, entry_no]
                     )
                     om_idno = cursor.fetchone()[0]
 
@@ -749,4 +763,104 @@ def admin_stock_view(request):
         'stock_summary': stock_summary,
         'suppliers':     suppliers,
         'products':      products,
+    })
+
+
+@login_required(login_url='core:login')
+@admin_required
+def admin_reports_view(request):
+    report_type = request.GET.get('report_type', '')
+    start_date  = request.GET.get('start_date', '')
+    end_date    = request.GET.get('end_date', '')
+
+    results = []
+    date_params = []
+    date_clause = ''
+
+    if start_date and end_date:
+        date_clause = ' AND om.order_date BETWEEN %s AND %s'
+        date_params = [start_date, end_date]
+
+    if report_type == 'sales_master':
+        sql = """
+            SELECT om.entry_no, u.name, om.order_date,
+                   SUM(od.qty * od.rate) AS total_amount
+            FROM order_master om
+            JOIN "user" u ON om.user_id = u.id
+            JOIN order_detail od ON od.order_master_idno = om.idno
+            WHERE om.order_type = 'Purchase Order'
+        """ + date_clause + """
+            GROUP BY om.idno, om.entry_no, u.name, om.order_date
+            ORDER BY om.order_date DESC, om.idno DESC
+        """
+        with connection.cursor() as cursor:
+            cursor.execute(sql, date_params)
+            results = [
+                {'entry_no': r[0], 'customer_name': r[1], 'order_date': r[2], 'total_amount': r[3]}
+                for r in cursor.fetchall()
+            ]
+
+    elif report_type == 'sales_detail':
+        sql = """
+            SELECT om.entry_no, om.order_date, p.name,
+                   od.qty, od.rate, (od.qty * od.rate) AS line_total
+            FROM order_detail od
+            JOIN order_master om ON od.order_master_idno = om.idno
+            JOIN product p ON od.product_code = p.code
+            WHERE om.order_type = 'Purchase Order'
+        """ + date_clause + """
+            ORDER BY om.order_date DESC, om.idno DESC
+        """
+        with connection.cursor() as cursor:
+            cursor.execute(sql, date_params)
+            results = [
+                {'entry_no': r[0], 'order_date': r[1], 'product_name': r[2],
+                 'qty': r[3], 'rate': r[4], 'line_total': r[5]}
+                for r in cursor.fetchall()
+            ]
+
+    elif report_type == 'purchase_master':
+        sql = """
+            SELECT om.entry_no, coa.name AS supplier_name, om.order_date,
+                   SUM(od.qty * od.rate) AS total_amount
+            FROM order_master om
+            JOIN "user" u ON om.user_id = u.id
+            JOIN chart_of_account coa ON u.account_code = coa.code
+            JOIN order_detail od ON od.order_master_idno = om.idno
+            WHERE om.order_type = 'Restock Order'
+        """ + date_clause + """
+            GROUP BY om.idno, om.entry_no, coa.name, om.order_date
+            ORDER BY om.order_date DESC, om.idno DESC
+        """
+        with connection.cursor() as cursor:
+            cursor.execute(sql, date_params)
+            results = [
+                {'entry_no': r[0], 'supplier_name': r[1], 'order_date': r[2], 'total_amount': r[3]}
+                for r in cursor.fetchall()
+            ]
+
+    elif report_type == 'purchase_detail':
+        sql = """
+            SELECT om.entry_no, om.order_date, p.name,
+                   od.qty, od.rate, (od.qty * od.rate) AS line_total
+            FROM order_detail od
+            JOIN order_master om ON od.order_master_idno = om.idno
+            JOIN product p ON od.product_code = p.code
+            WHERE om.order_type = 'Restock Order'
+        """ + date_clause + """
+            ORDER BY om.order_date DESC, om.idno DESC
+        """
+        with connection.cursor() as cursor:
+            cursor.execute(sql, date_params)
+            results = [
+                {'entry_no': r[0], 'order_date': r[1], 'product_name': r[2],
+                 'qty': r[3], 'rate': r[4], 'line_total': r[5]}
+                for r in cursor.fetchall()
+            ]
+
+    return render(request, 'admin_reports.html', {
+        'report_type': report_type,
+        'start_date':  start_date,
+        'end_date':    end_date,
+        'results':     results,
     })

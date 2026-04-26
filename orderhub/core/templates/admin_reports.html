@@ -1,0 +1,122 @@
+{% extends 'admin_base.html' %}
+
+{% block title %}Reports – Admin{% endblock %}
+{% block nav_reports %}active{% endblock %}
+{% block page_title %}Reports{% endblock %}
+
+{% block content %}
+<div class="admin-grid">
+
+    <!-- ── Report Controls ────────────────────────────────── -->
+    <section class="admin-card">
+        <div class="admin-card-header">
+            <h2>Generate Report</h2>
+        </div>
+        <form method="get" class="admin-form">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="start_date">Start Date</label>
+                    <input type="date" id="start_date" name="start_date" value="{{ start_date }}" />
+                </div>
+                <div class="form-group">
+                    <label for="end_date">End Date</label>
+                    <input type="date" id="end_date" name="end_date" value="{{ end_date }}" />
+                </div>
+                <div class="form-group">
+                    <label for="report_type">Report Type</label>
+                    <select id="report_type" name="report_type" required>
+                        <option value="">Select report…</option>
+                        <option value="sales_master"    {% if report_type == 'sales_master' %}selected{% endif %}>Sales Report</option>
+                        <option value="sales_detail"    {% if report_type == 'sales_detail' %}selected{% endif %}>Sales Detail</option>
+                        <option value="purchase_master"  {% if report_type == 'purchase_master' %}selected{% endif %}>Purchase Report</option>
+                        <option value="purchase_detail"  {% if report_type == 'purchase_detail' %}selected{% endif %}>Purchase Detail</option>
+                    </select>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary">Generate Report</button>
+        </form>
+    </section>
+
+    <!-- ── Report Results ─────────────────────────────────── -->
+    {% if report_type %}
+    <section class="admin-card">
+        <div class="admin-card-header">
+            <h2>
+                {% if report_type == 'sales_master' %}Sales Report
+                {% elif report_type == 'sales_detail' %}Sales Detail Report
+                {% elif report_type == 'purchase_master' %}Purchase Report
+                {% elif report_type == 'purchase_detail' %}Purchase Detail Report
+                {% endif %}
+            </h2>
+        </div>
+        <table class="data-table">
+            <thead>
+                <tr>
+                {% if report_type == 'sales_master' %}
+                    <th>Entry No</th>
+                    <th>Customer</th>
+                    <th>Order Date</th>
+                    <th>Total Amount</th>
+                {% elif report_type == 'sales_detail' %}
+                    <th>Entry No</th>
+                    <th>Order Date</th>
+                    <th>Product</th>
+                    <th>Qty</th>
+                    <th>Rate</th>
+                    <th>Line Total</th>
+                {% elif report_type == 'purchase_master' %}
+                    <th>Entry No</th>
+                    <th>Supplier</th>
+                    <th>Order Date</th>
+                    <th>Total Amount</th>
+                {% elif report_type == 'purchase_detail' %}
+                    <th>Entry No</th>
+                    <th>Order Date</th>
+                    <th>Product</th>
+                    <th>Qty</th>
+                    <th>Rate</th>
+                    <th>Line Total</th>
+                {% endif %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in results %}
+                <tr>
+                {% if report_type == 'sales_master' %}
+                    <td>{{ row.entry_no }}</td>
+                    <td>{{ row.customer_name }}</td>
+                    <td>{{ row.order_date }}</td>
+                    <td>{{ row.total_amount }}</td>
+                {% elif report_type == 'sales_detail' %}
+                    <td>{{ row.entry_no }}</td>
+                    <td>{{ row.order_date }}</td>
+                    <td>{{ row.product_name }}</td>
+                    <td>{{ row.qty }}</td>
+                    <td>{{ row.rate }}</td>
+                    <td>{{ row.line_total }}</td>
+                {% elif report_type == 'purchase_master' %}
+                    <td>{{ row.entry_no }}</td>
+                    <td>{{ row.supplier_name }}</td>
+                    <td>{{ row.order_date }}</td>
+                    <td>{{ row.total_amount }}</td>
+                {% elif report_type == 'purchase_detail' %}
+                    <td>{{ row.entry_no }}</td>
+                    <td>{{ row.order_date }}</td>
+                    <td>{{ row.product_name }}</td>
+                    <td>{{ row.qty }}</td>
+                    <td>{{ row.rate }}</td>
+                    <td>{{ row.line_total }}</td>
+                {% endif %}
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6">No records found for this report.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </section>
+    {% endif %}
+
+</div>
+{% endblock %}
