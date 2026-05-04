@@ -584,8 +584,17 @@ def delete_product_view(request, code):
             if cursor.fetchone():
                 messages.error(request, f'Cannot delete product "{code}" — it has stock records.')
             else:
-                cursor.execute("DELETE FROM product WHERE code = %s", [code])
-                messages.success(request, f'Product "{code}" deleted.')
+                cursor.execute("SELECT COUNT(*) FROM bundle_item WHERE product_code = %s", [code])
+                bundle_count = cursor.fetchone()[0]
+                if bundle_count > 0:
+                    messages.error(
+                        request,
+                        'Cannot delete this product because it is currently included in a product bundle. '
+                        'Please remove it from the bundle first.'
+                    )
+                else:
+                    cursor.execute("DELETE FROM product WHERE code = %s", [code])
+                    messages.success(request, f'Product "{code}" deleted.')
     return redirect('core:admin_products')
 
 
@@ -845,10 +854,12 @@ def admin_stock_view(request):
     with connection.cursor() as cursor:
         cursor.execute(
             """
-            SELECT s.product_code, p.name, COALESCE(SUM(s.receive), 0), COALESCE(SUM(s.issue), 0)
+            SELECT s.product_code, p.name, w.name,
+                   COALESCE(SUM(s.receive), 0), COALESCE(SUM(s.issue), 0)
             FROM stock s
             JOIN product p ON s.product_code = p.code
-            GROUP BY s.product_code, p.name
+            JOIN warehouse w ON s.warehouse_code = w.code
+            GROUP BY s.product_code, p.name, w.name
             ORDER BY s.product_code
             """
         )
@@ -856,11 +867,12 @@ def admin_stock_view(request):
 
     stock_summary = [
         {
-            'product_code':   r[0],
+            'product_code':       r[0],
             'product_code__name': r[1],
-            'total_receive':  r[2],
-            'total_issue':    r[3],
-            'available':      r[2] - r[3],
+            'warehouse_name':     r[2],
+            'total_receive':      r[3],
+            'total_issue':        r[4],
+            'available':          r[3] - r[4],
         }
         for r in stock_rows
     ]
@@ -1131,31 +1143,6 @@ def admin_reports_view(request):
 @login_required(login_url='core:login')
 @admin_required
 def admin_bundles_view(request):
-    # ── Delete bundle ─────────────────────────────────
-    if request.method == 'POST' and 'delete_bundle' in request.POST:
-        bundle_code = request.POST.get('bundle_code', '')
-        if bundle_code:
-            with connection.cursor() as cursor:
-                # Safeguard: check if any bundle item product appears in order_detail
-                # linked through this bundle (we check if any order references a product
-                # that belongs to this bundle AND was ordered while bundle was active)
-                cursor.execute("""
-                    SELECT 1 FROM bundle_item bi
-                    JOIN order_detail od ON od.product_code = bi.product_code
-                    WHERE bi.bundle_code = %s
-                    LIMIT 1
-                """, [bundle_code])
-                if cursor.fetchone():
-                    messages.error(
-                        request,
-                        f'Cannot delete bundle "{bundle_code}" — its products have been used in orders.'
-                    )
-                else:
-                    cursor.execute("DELETE FROM bundle_item WHERE bundle_code = %s", [bundle_code])
-                    cursor.execute("DELETE FROM product_bundle WHERE code = %s", [bundle_code])
-                    messages.success(request, f'Bundle "{bundle_code}" deleted.')
-        return redirect('core:admin_bundles')
-
     # ── Add bundle ────────────────────────────────────
     if request.method == 'POST' and 'add_bundle' in request.POST:
         name     = request.POST.get('bundle_name', '').strip()
@@ -1222,4 +1209,143 @@ def admin_bundles_view(request):
     return render(request, 'admin_bundles.html', {
         'bundles':  bundles,
         'products': products,
+    })
+
+
+@login_required(login_url='core:login')
+@admin_required
+def admin_toggle_bundle_view(request, code):
+    if request.method == 'POST':
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "UPDATE product_bundle SET is_active = NOT is_active WHERE code = %s",
+                [code]
+            )
+        messages.success(request, f'Bundle "{code}" status toggled.')
+    return redirect('core:admin_bundles')
+
+
+@login_required(login_url='core:login')
+@admin_required
+def admin_delete_bundle_view(request, code):
+    if request.method == 'POST':
+        with connection.cursor() as cursor:
+            cursor.execute("DELETE FROM bundle_item WHERE bundle_code = %s", [code])
+            cursor.execute("DELETE FROM product_bundle WHERE code = %s", [code])
+        messages.success(request, f'Bundle "{code}" deleted.')
+    return redirect('core:admin_bundles')
+
+
+@login_required(login_url='core:login')
+@admin_required
+def admin_edit_account_view(request, code):
+    if request.method == 'POST':
+        name = request.POST.get('name', '').strip()
+        if not name:
+            messages.error(request, 'Account name is required.')
+            return redirect('core:admin_accounts')
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "UPDATE chart_of_account SET name = %s WHERE code = %s",
+                [name, code]
+            )
+        messages.success(request, f'Account "{code}" updated.')
+    return redirect('core:admin_accounts')
+
+
+@login_required(login_url='core:login')
+@admin_required
+def admin_edit_product_view(request, code):
+    if request.method == 'POST':
+        name = request.POST.get('name', '').strip()
+        rate = request.POST.get('rate', '0')
+        try:
+            rate_val = Decimal(rate)
+        except Exception:
+            rate_val = Decimal('0')
+        if not name:
+            messages.error(request, 'Product name is required.')
+            return redirect('core:admin_products')
+        if rate_val <= 0:
+            messages.error(request, 'Product rate must be greater than 0.')
+            return redirect('core:admin_products')
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "UPDATE product SET name = %s, rate = %s WHERE code = %s",
+                [name, str(rate_val), code]
+            )
+        messages.success(request, f'Product "{code}" updated.')
+    return redirect('core:admin_products')
+
+
+@login_required(login_url='core:login')
+@admin_required
+def admin_edit_bundle_view(request, code):
+    if request.method == 'POST':
+        name     = request.POST.get('bundle_name', '').strip()
+        discount = request.POST.get('discount_percentage', '0')
+
+        product_codes = request.POST.getlist('item_product[]')
+        quantities    = request.POST.getlist('item_qty[]')
+
+        if not name:
+            messages.error(request, 'Bundle name is required.')
+            return redirect('core:admin_bundles')
+
+        try:
+            with transaction.atomic():
+                with connection.cursor() as cursor:
+                    # Step A: Master Update
+                    cursor.execute(
+                        "UPDATE product_bundle SET name = %s, discount_percentage = %s WHERE code = %s",
+                        [name, discount, code]
+                    )
+                    # Step B: Nuke existing items
+                    cursor.execute(
+                        "DELETE FROM bundle_item WHERE bundle_code = %s",
+                        [code]
+                    )
+                    # Step C: Pave — insert submitted items
+                    for pc, qty in zip(product_codes, quantities):
+                        if pc and qty:
+                            cursor.execute(
+                                "INSERT INTO bundle_item (bundle_code, product_code, qty_included) VALUES (%s, %s, %s)",
+                                [code, pc, int(qty)]
+                            )
+            messages.success(request, f'Bundle "{code}" updated successfully.')
+        except Exception as e:
+            messages.error(request, f'Error updating bundle: {e}')
+        return redirect('core:admin_bundles')
+
+    # GET: Fetch bundle details and items for the edit form
+    with connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT code, name, discount_percentage, is_active FROM product_bundle WHERE code = %s",
+            [code]
+        )
+        row = cursor.fetchone()
+        if not row:
+            raise Http404("Bundle not found")
+        bundle = {
+            'code': row[0], 'name': row[1],
+            'discount': row[2], 'is_active': row[3],
+        }
+
+        cursor.execute(
+            "SELECT product_code, qty_included FROM bundle_item WHERE bundle_code = %s ORDER BY product_code",
+            [code]
+        )
+        bundle_items = [
+            {'product_code': r[0], 'qty_included': r[1]}
+            for r in cursor.fetchall()
+        ]
+
+        cursor.execute("SELECT code, name FROM product ORDER BY name")
+        products = [{'code': r[0], 'name': r[1]} for r in cursor.fetchall()]
+
+    return render(request, 'edit_bundle.html', {
+        'bundle': bundle,
+        'bundle_items': bundle_items,
+        'products': products,
+        'bundle_items_json': json.dumps(bundle_items),
     })

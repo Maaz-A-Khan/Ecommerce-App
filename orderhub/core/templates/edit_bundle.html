@@ -1,0 +1,118 @@
+{% extends 'admin_base.html' %}
+
+{% block title %}Edit Bundle – Admin{% endblock %}
+{% block nav_bundles %}active{% endblock %}
+{% block page_title %}Edit Bundle: {{ bundle.code }}{% endblock %}
+
+{% block content %}
+<div class="admin-grid">
+
+    <section class="admin-card">
+        <div class="admin-card-header">
+            <h2>Edit Bundle — {{ bundle.code }}</h2>
+            <a href="{% url 'core:admin_bundles' %}" class="btn btn-outline">← Back to Bundles</a>
+        </div>
+
+        <form method="post" id="edit-bundle-form" class="admin-form">
+            {% csrf_token %}
+
+            <!-- Master Fields -->
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="bundle_name">Bundle Name</label>
+                    <input type="text" id="bundle_name" name="bundle_name"
+                           value="{{ bundle.name }}" required />
+                </div>
+                <div class="form-group">
+                    <label for="discount_percentage">Discount %</label>
+                    <input type="number" id="discount_percentage" name="discount_percentage"
+                           step="0.01" min="0" max="100"
+                           value="{{ bundle.discount }}" required />
+                </div>
+            </div>
+
+            <!-- Dynamic Bundle Items -->
+            <div class="bundle-items-section" style="margin-top:1.5rem;">
+                <h3 style="font-size:0.95rem; margin-bottom:0.8rem; color:var(--text);">Bundle Items</h3>
+                <div id="bundle-items-container">
+                    <!-- Dynamic rows rendered by JS -->
+                </div>
+                <button type="button" class="btn btn-outline" onclick="addBundleItemRow()" style="margin-top:0.6rem;">
+                    + Add Product Row
+                </button>
+            </div>
+
+            <div style="display:flex; gap:0.8rem; margin-top:1.5rem;">
+                <button type="submit" class="btn btn-primary">Save Changes</button>
+                <a href="{% url 'core:admin_bundles' %}" class="btn btn-outline">Cancel</a>
+            </div>
+        </form>
+    </section>
+
+</div>
+
+<script>
+const availableProducts = [
+    {% for p in products %}
+    { code: "{{ p.code }}", name: "{{ p.name|escapejs }}" },
+    {% endfor %}
+];
+
+const existingItems = {{ bundle_items_json|safe }};
+
+let rowCount = 0;
+
+function buildProductOptions(selectedCode) {
+    let options = '<option value="">Select product…</option>';
+    availableProducts.forEach(p => {
+        const sel = (p.code === selectedCode) ? ' selected' : '';
+        options += `<option value="${p.code}"${sel}>${p.code} – ${p.name}</option>`;
+    });
+    return options;
+}
+
+function addBundleItemRow(productCode, qty) {
+    rowCount++;
+    const container = document.getElementById('bundle-items-container');
+    const row = document.createElement('div');
+    row.className = 'bundle-item-row';
+    row.id = 'bundle-row-' + rowCount;
+
+    const options = buildProductOptions(productCode || '');
+    const qtyVal = qty || 1;
+
+    row.innerHTML = `
+        <div class="form-row" style="align-items:flex-end;">
+            <div class="form-group" style="flex:3;">
+                <label>Product</label>
+                <select name="item_product[]" required>${options}</select>
+            </div>
+            <div class="form-group" style="flex:1;">
+                <label>Qty</label>
+                <input type="number" name="item_qty[]" min="1" value="${qtyVal}" required />
+            </div>
+            <div class="form-group" style="flex:0 0 auto; padding-bottom:0.2rem;">
+                <button type="button" class="btn-danger" onclick="removeBundleRow('bundle-row-${rowCount}')">✕</button>
+            </div>
+        </div>
+    `;
+    container.appendChild(row);
+}
+
+function removeBundleRow(id) {
+    const row = document.getElementById(id);
+    if (row) row.remove();
+}
+
+// Render existing items on page load
+document.addEventListener('DOMContentLoaded', function() {
+    existingItems.forEach(item => {
+        addBundleItemRow(item.product_code, item.qty_included);
+    });
+    // If bundle has no items, add one empty row
+    if (existingItems.length === 0) {
+        addBundleItemRow();
+    }
+});
+</script>
+{% endblock %}

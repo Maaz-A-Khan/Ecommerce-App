@@ -67,13 +67,20 @@
                         </span>
                     </td>
                     <td>
-                        <form method="post" style="display:inline;"
-                              onsubmit="return confirm('Delete bundle {{ b.code }}?');">
-                            {% csrf_token %}
-                            <input type="hidden" name="delete_bundle" value="1" />
-                            <input type="hidden" name="bundle_code" value="{{ b.code }}" />
-                            <button type="submit" class="btn-danger">Delete</button>
-                        </form>
+                        <div style="display:flex; gap:0.4rem; flex-wrap:wrap;">
+                            <form method="post" action="{% url 'core:toggle_bundle' b.code %}" style="display:inline;">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-outline" style="font-size:0.78rem; padding:0.3rem 0.6rem;">
+                                    {% if b.is_active %}Deactivate{% else %}Activate{% endif %}
+                                </button>
+                            </form>
+                            <a href="{% url 'core:edit_bundle' b.code %}" class="btn btn-outline" style="font-size:0.78rem; padding:0.3rem 0.6rem;">Edit</a>
+                            <form method="post" action="{% url 'core:delete_bundle' b.code %}" style="display:inline;"
+                                  onsubmit="return confirm('Permanently delete bundle {{ b.code }}? This cannot be undone.');">
+                                {% csrf_token %}
+                                <button type="submit" class="btn-danger" style="font-size:0.78rem; padding:0.3rem 0.6rem;">Delete</button>
+                            </form>
+                        </div>
                     </td>
                 </tr>
                 {% empty %}

@@ -62,11 +62,15 @@
                     <td>{{ p.rate }}</td>
                     <td>{{ p.category_code.name }}</td>
                     <td>
-                        <form method="post" action="{% url 'core:delete_product' p.code %}" style="display:inline;"
-                              onsubmit="return confirm('Delete product {{ p.code }}?');">
-                            {% csrf_token %}
-                            <button type="submit" class="btn-danger">Delete</button>
-                        </form>
+                        <div style="display:flex; gap:0.4rem; flex-wrap:wrap; align-items:center;">
+                            <button type="button" class="btn btn-outline" style="font-size:0.78rem; padding:0.3rem 0.6rem;"
+                                onclick="openEditProduct('{{ p.code }}', '{{ p.name|escapejs }}', '{{ p.rate }}')">Edit</button>
+                            <form method="post" action="{% url 'core:delete_product' p.code %}" style="display:inline;"
+                                  onsubmit="return confirm('Delete product {{ p.code }}?');">
+                                {% csrf_token %}
+                                <button type="submit" class="btn-danger" style="font-size:0.78rem; padding:0.3rem 0.6rem;">Delete</button>
+                            </form>
+                        </div>
                     </td>
                 </tr>
                 {% empty %}
@@ -132,4 +136,48 @@
     </section>
 
 </div>
+
+<!-- Edit Product Modal Overlay -->
+<div id="edit-product-overlay" class="modal-overlay">
+    <div class="modal-dialog">
+        <h3 class="modal-title">Edit Product</h3>
+        <form method="post" id="edit-product-form">
+            {% csrf_token %}
+            <div class="form-group" style="margin-bottom:1rem;">
+                <label>Product Code</label>
+                <input type="text" id="edit-product-code" disabled style="opacity:0.6;" />
+            </div>
+            <div class="form-group" style="margin-bottom:1rem;">
+                <label for="edit-product-name">Name</label>
+                <input type="text" id="edit-product-name" name="name" required />
+            </div>
+            <div class="form-group" style="margin-bottom:1rem;">
+                <label for="edit-product-rate">Rate (PKR)</label>
+                <input type="number" id="edit-product-rate" name="rate" step="0.01" min="0.01" required />
+            </div>
+            <div style="display:flex; gap:0.8rem; justify-content:flex-end;">
+                <button type="button" class="btn btn-outline" onclick="closeEditProduct()">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function openEditProduct(code, name, rate) {
+    document.getElementById('edit-product-code').value = code;
+    document.getElementById('edit-product-name').value = name;
+    document.getElementById('edit-product-rate').value = rate;
+    const form = document.getElementById('edit-product-form');
+    form.action = '/admin-panel/products/edit/' + code + '/';
+    const overlay = document.getElementById('edit-product-overlay');
+    overlay.style.display = 'flex';
+}
+function closeEditProduct() {
+    document.getElementById('edit-product-overlay').style.display = 'none';
+}
+document.getElementById('edit-product-overlay').addEventListener('click', function(e) {
+    if (e.target === this) closeEditProduct();
+});
+</script>
 {% endblock %}

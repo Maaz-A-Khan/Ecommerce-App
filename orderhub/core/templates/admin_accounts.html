@@ -18,6 +18,7 @@
                     <th>Code</th>
                     <th>Name</th>
                     <th>Type</th>
+                    <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -26,9 +27,13 @@
                     <td>{{ a.code }}</td>
                     <td>{{ a.name }}</td>
                     <td><span class="badge badge-customer">{{ a.account_type }}</span></td>
+                    <td>
+                        <button type="button" class="btn btn-outline" style="font-size:0.78rem; padding:0.3rem 0.6rem;"
+                            onclick="openEditAccount('{{ a.code }}', '{{ a.name|escapejs }}')">Edit</button>
+                    </td>
                 </tr>
                 {% empty %}
-                <tr><td colspan="3">No customer accounts.</td></tr>
+                <tr><td colspan="4">No customer accounts.</td></tr>
                 {% endfor %}
             </tbody>
         </table>
@@ -71,6 +76,7 @@
                     <th>Code</th>
                     <th>Name</th>
                     <th>Type</th>
+                    <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -79,13 +85,56 @@
                     <td>{{ a.code }}</td>
                     <td>{{ a.name }}</td>
                     <td><span class="badge badge-supplier">{{ a.account_type }}</span></td>
+                    <td>
+                        <button type="button" class="btn btn-outline" style="font-size:0.78rem; padding:0.3rem 0.6rem;"
+                            onclick="openEditAccount('{{ a.code }}', '{{ a.name|escapejs }}')">Edit</button>
+                    </td>
                 </tr>
                 {% empty %}
-                <tr><td colspan="3">No supplier accounts.</td></tr>
+                <tr><td colspan="4">No supplier accounts.</td></tr>
                 {% endfor %}
             </tbody>
         </table>
     </section>
 
 </div>
+
+<!-- Edit Account Modal Overlay -->
+<div id="edit-account-overlay" class="modal-overlay">
+    <div class="modal-dialog">
+        <h3 class="modal-title">Edit Account</h3>
+        <form method="post" id="edit-account-form">
+            {% csrf_token %}
+            <div class="form-group" style="margin-bottom:1rem;">
+                <label>Account Code</label>
+                <input type="text" id="edit-account-code" disabled style="opacity:0.6;" />
+            </div>
+            <div class="form-group" style="margin-bottom:1rem;">
+                <label for="edit-account-name">Name</label>
+                <input type="text" id="edit-account-name" name="name" required />
+            </div>
+            <div style="display:flex; gap:0.8rem; justify-content:flex-end;">
+                <button type="button" class="btn btn-outline" onclick="closeEditAccount()">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function openEditAccount(code, name) {
+    document.getElementById('edit-account-code').value = code;
+    document.getElementById('edit-account-name').value = name;
+    const form = document.getElementById('edit-account-form');
+    form.action = '/admin-panel/accounts/edit/' + code + '/';
+    const overlay = document.getElementById('edit-account-overlay');
+    overlay.style.display = 'flex';
+}
+function closeEditAccount() {
+    document.getElementById('edit-account-overlay').style.display = 'none';
+}
+document.getElementById('edit-account-overlay').addEventListener('click', function(e) {
+    if (e.target === this) closeEditAccount();
+});
+</script>
 {% endblock %}
