@@ -22,5 +22,6 @@ urlpatterns = [
     path('admin-panel/orders/<int:idno>/', views.admin_order_detail_view,  name='admin_order_detail'),
     path('admin-panel/accounts/',          views.admin_accounts_view,      name='admin_accounts'),
     path('admin-panel/stock/',             views.admin_stock_view,         name='admin_stock'),
+    path('admin-panel/bundles/',            views.admin_bundles_view,       name='admin_bundles'),
     path('admin-panel/reports/',            views.admin_reports_view,       name='admin_reports'),
 ]

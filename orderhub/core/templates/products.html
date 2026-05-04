@@ -5,6 +5,105 @@
 {% block page_title %}Products{% endblock %}
 
 {% block content %}
+
+<!-- ── Active Bundles Section ─────────────────────────── -->
+{% if bundles %}
+<div class="bundles-section">
+    <h2 class="section-title" style="margin-bottom:1rem;">🎁 Bundle Deals</h2>
+    <div class="bundle-grid">
+        {% for bundle in bundles %}
+        <div class="bundle-card">
+            <div class="bundle-card-header">
+                <span class="bundle-name">{{ bundle.name }}</span>
+                <span class="badge badge-discount">-{{ bundle.discount }}%</span>
+            </div>
+            <div class="bundle-card-body">
+                <div class="bundle-pricing">
+                    <span class="price-original">PKR {{ bundle.original_price }}</span>
+                    <span class="price-discounted">PKR {{ bundle.discounted_price }}</span>
+                </div>
+                <div class="bundle-card-actions">
+                    <button type="button" class="btn btn-sm btn-outline"
+                            onclick="toggleBundleModal('modal-{{ bundle.code }}')">
+                        What's Inside
+                    </button>
+                    <button class="btn btn-sm btn-primary add-to-cart"
+                            data-code="{{ bundle.code }}"
+                            data-name="{{ bundle.name }}"
+                            data-rate="{{ bundle.discounted_price }}">
+                        Add to Cart
+                    </button>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Bundle Modals (rendered OUTSIDE cards to avoid stacking context issues) -->
+{% for bundle in bundles %}
+<div class="bundle-modal-overlay" id="modal-{{ bundle.code }}">
+    <div class="bundle-modal" onclick="event.stopPropagation();">
+        <div class="bundle-modal-header">
+            <h3>{{ bundle.name }}</h3>
+            <button type="button" class="bundle-modal-close" onclick="toggleBundleModal('modal-{{ bundle.code }}')">✕</button>
+        </div>
+        <div class="bundle-modal-body">
+            <p class="bundle-modal-label">What's inside:</p>
+            <ul class="bundle-contents-list">
+                {% for item in bundle.items %}
+                <li>
+                    <span class="item-name">{{ item.name }}</span>
+                    <span class="item-detail">× {{ item.qty }} — PKR {{ item.rate }} each</span>
+                </li>
+                {% endfor %}
+            </ul>
+            <div class="bundle-modal-pricing">
+                <div class="price-row">
+                    <span>Original Price</span>
+                    <span class="price-original">PKR {{ bundle.original_price }}</span>
+                </div>
+                <div class="price-row price-row-final">
+                    <span>Bundle Price</span>
+                    <span class="price-discounted">PKR {{ bundle.discounted_price }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+{% endif %}
+
+<!-- ── Filters Bar ────────────────────────────────────── -->
+<div class="filter-bar">
+    <form method="get" class="filter-form">
+        <div class="filter-group">
+            <input type="text" name="search" placeholder="Search products…"
+                   value="{{ search }}" class="filter-input" />
+        </div>
+        <div class="filter-group">
+            <select name="category" class="filter-select">
+                <option value="">All Categories</option>
+                {% for cat in categories %}
+                    <option value="{{ cat.code }}" {% if category_filter == cat.code %}selected{% endif %}>
+                        {{ cat.name }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="filter-group">
+            <select name="sort" class="filter-select">
+                <option value="">Sort by…</option>
+                <option value="low" {% if sort == 'low' %}selected{% endif %}>Price: Low → High</option>
+                <option value="high" {% if sort == 'high' %}selected{% endif %}>Price: High → Low</option>
+            </select>
+        </div>
+        <button type="submit" class="btn btn-primary btn-sm">Apply</button>
+        <a href="{% url 'core:products' %}" class="btn btn-outline btn-sm">Clear</a>
+    </form>
+</div>
+
+<!-- ── Products Table ─────────────────────────────────── -->
 <div class="products-container">
     <h2>Product List</h2>
 
@@ -13,6 +112,7 @@
             <tr>
                 <th>Code</th>
                 <th>Name</th>
+                <th>Category</th>
                 <th>Rate (PKR)</th>
                 <th>Quantity</th>
                 <th>Action</th>
@@ -23,6 +123,7 @@
             <tr>
                 <td>{{ product.code }}</td>
                 <td>{{ product.name }}</td>
+                <td>{{ product.category_name }}</td>
                 <td>{{ product.rate }}</td>
                 <td>
                     <div class="qty-selector">
@@ -41,7 +142,7 @@
                 </td>
             </tr>
             {% empty %}
-                <tr><td colspan="5">No products found.</td></tr>
+                <tr><td colspan="6">No products found.</td></tr>
             {% endfor %}
         </tbody>
     </table>
@@ -52,4 +153,20 @@
     <h3>Cart Total: PKR <span id="cart-total">0.00</span></h3>
     <a href="{% url 'core:checkout' %}" class="btn btn-primary">Proceed to Checkout</a>
 </div>
+
+<script>
+function toggleBundleModal(id) {
+    const modal = document.getElementById(id);
+    if (modal) modal.classList.toggle('active');
+}
+
+// Close modal when clicking overlay background
+document.querySelectorAll('.bundle-modal-overlay').forEach(overlay => {
+    overlay.addEventListener('click', function(e) {
+        if (e.target === this) {
+            this.classList.remove('active');
+        }
+    });
+});
+</script>
 {% endblock %}

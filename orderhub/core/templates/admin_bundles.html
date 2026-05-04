@@ -1,0 +1,142 @@
+{% extends 'admin_base.html' %}
+
+{% block title %}Bundles – Admin{% endblock %}
+{% block nav_bundles %}active{% endblock %}
+{% block page_title %}Bundle Management{% endblock %}
+
+{% block content %}
+<div class="admin-grid">
+
+    <!-- ── Existing Bundles ──────────────────────────────── -->
+    <section class="admin-card">
+        <div class="admin-card-header">
+            <h2>Product Bundles</h2>
+            <button class="btn btn-primary"
+                onclick="document.getElementById('bundle-form').classList.toggle('hidden')">
+                + Create Bundle
+            </button>
+        </div>
+
+        <!-- Add Bundle Form (hidden by default) -->
+        <form method="post" id="bundle-form" class="admin-form hidden">
+            {% csrf_token %}
+            <input type="hidden" name="add_bundle" value="1" />
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="bundle_name">Bundle Name</label>
+                    <input type="text" id="bundle_name" name="bundle_name" placeholder="Bundle name" required />
+                </div>
+                <div class="form-group">
+                    <label for="discount_percentage">Discount %</label>
+                    <input type="number" id="discount_percentage" name="discount_percentage" step="0.01" min="0" max="100" placeholder="10.00" required />
+                </div>
+            </div>
+
+            <div class="bundle-items-section">
+                <h3 style="font-size:0.95rem; margin-bottom:0.8rem; color:var(--text);">Bundle Items</h3>
+                <div id="bundle-items-container">
+                    <!-- Dynamic rows added by JS -->
+                </div>
+                <button type="button" class="btn btn-outline" onclick="addBundleItemRow()" style="margin-top:0.6rem;">
+                    + Add Product Row
+                </button>
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="margin-top:1rem;">Save Bundle</button>
+        </form>
+
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Code</th>
+                    <th>Name</th>
+                    <th>Discount %</th>
+                    <th>Active</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for b in bundles %}
+                <tr>
+                    <td>{{ b.code }}</td>
+                    <td>{{ b.name }}</td>
+                    <td>{{ b.discount }}%</td>
+                    <td>
+                        <span class="badge {% if b.is_active %}badge-regular{% else %}badge-restock{% endif %}">
+                            {% if b.is_active %}Active{% else %}Inactive{% endif %}
+                        </span>
+                    </td>
+                    <td>
+                        <form method="post" style="display:inline;"
+                              onsubmit="return confirm('Delete bundle {{ b.code }}?');">
+                            {% csrf_token %}
+                            <input type="hidden" name="delete_bundle" value="1" />
+                            <input type="hidden" name="bundle_code" value="{{ b.code }}" />
+                            <button type="submit" class="btn-danger">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5">No bundles created yet.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </section>
+
+</div>
+
+<script>
+const availableProducts = [
+    {% for p in products %}
+    { code: "{{ p.code }}", name: "{{ p.name }}" },
+    {% endfor %}
+];
+
+let rowCount = 0;
+
+function addBundleItemRow() {
+    rowCount++;
+    const container = document.getElementById('bundle-items-container');
+    const row = document.createElement('div');
+    row.className = 'bundle-item-row';
+    row.id = 'bundle-row-' + rowCount;
+
+    let options = '<option value="">Select product…</option>';
+    availableProducts.forEach(p => {
+        options += `<option value="${p.code}">${p.code} – ${p.name}</option>`;
+    });
+
+    row.innerHTML = `
+        <div class="form-row" style="align-items:flex-end;">
+            <div class="form-group" style="flex:3;">
+                <label>Product</label>
+                <select name="item_product[]" required>${options}</select>
+            </div>
+            <div class="form-group" style="flex:1;">
+                <label>Qty</label>
+                <input type="number" name="item_qty[]" min="1" value="1" required />
+            </div>
+            <div class="form-group" style="flex:0 0 auto; padding-bottom:0.2rem;">
+                <button type="button" class="btn-danger" onclick="removeBundleRow('bundle-row-${rowCount}')">✕</button>
+            </div>
+        </div>
+    `;
+    container.appendChild(row);
+}
+
+function removeBundleRow(id) {
+    const row = document.getElementById(id);
+    if (row) row.remove();
+}
+
+// Add one row by default when form is shown
+document.querySelector('[onclick*="bundle-form"]').addEventListener('click', function() {
+    const container = document.getElementById('bundle-items-container');
+    if (container.children.length === 0) {
+        addBundleItemRow();
+    }
+});
+</script>
+{% endblock %}

@@ -66,6 +66,18 @@
                     </select>
                 </div>
                 <div class="form-group">
+                    <label for="warehouse">Warehouse</label>
+                    <select id="warehouse" name="warehouse" required>
+                        <option value="">Select warehouse…</option>
+                        {% for w in warehouses %}
+                            <option value="{{ w.code }}">{{ w.code }} – {{ w.name }}</option>
+                        {% endfor %}
+                    </select>
+                    <small id="warehouse-hint" class="form-hint" style="display:none; color: var(--accent); font-weight:600; margin-top:0.3rem;">
+                        🔒 Locked – this product is already assigned to this warehouse.
+                    </small>
+                </div>
+                <div class="form-group">
                     <label for="quantity">Quantity</label>
                     <input type="number" id="quantity" name="quantity" min="1" placeholder="0" required />
                 </div>
@@ -75,4 +87,39 @@
     </section>
 
 </div>
+
+<script>
+(function() {
+    const productWhMap = {{ product_warehouse_json|safe }};
+    const productSelect = document.getElementById('product');
+    const warehouseSelect = document.getElementById('warehouse');
+    const warehouseHint = document.getElementById('warehouse-hint');
+
+    productSelect.addEventListener('change', function() {
+        const code = this.value;
+        if (code && productWhMap[code]) {
+            // Lock warehouse to existing assignment
+            warehouseSelect.value = productWhMap[code];
+            warehouseSelect.disabled = true;
+            warehouseHint.style.display = 'block';
+            // Add hidden input so value is submitted even when disabled
+            let hidden = document.getElementById('warehouse-hidden');
+            if (!hidden) {
+                hidden = document.createElement('input');
+                hidden.type = 'hidden';
+                hidden.name = 'warehouse';
+                hidden.id = 'warehouse-hidden';
+                warehouseSelect.parentNode.appendChild(hidden);
+            }
+            hidden.value = productWhMap[code];
+        } else {
+            // Unlock warehouse
+            warehouseSelect.disabled = false;
+            warehouseHint.style.display = 'none';
+            const hidden = document.getElementById('warehouse-hidden');
+            if (hidden) hidden.remove();
+        }
+    });
+})();
+</script>
 {% endblock %}

@@ -1,8 +1,13 @@
 {% extends 'admin_base.html' %}
 
 {% block title %}Reports – Admin{% endblock %}
-{% block nav_reports %}active{% endblock %}
-{% block page_title %}Reports{% endblock %}
+{% block nav_reports %}open{% endblock %}
+{% block page_title %}
+    {% if category == 'purchase' %}Purchase Reports
+    {% elif category == 'stock' %}Stock Reports
+    {% else %}Sales Reports
+    {% endif %}
+{% endblock %}
 
 {% block content %}
 <div class="admin-grid">
@@ -13,7 +18,9 @@
             <h2>Generate Report</h2>
         </div>
         <form method="get" class="admin-form">
+            <input type="hidden" name="category" value="{{ category }}" />
             <div class="form-row">
+                {% if category != 'stock' %}
                 <div class="form-group">
                     <label for="start_date">Start Date</label>
                     <input type="date" id="start_date" name="start_date" value="{{ start_date }}" />
@@ -22,14 +29,25 @@
                     <label for="end_date">End Date</label>
                     <input type="date" id="end_date" name="end_date" value="{{ end_date }}" />
                 </div>
+                {% endif %}
                 <div class="form-group">
                     <label for="report_type">Report Type</label>
                     <select id="report_type" name="report_type" required>
                         <option value="">Select report…</option>
-                        <option value="sales_master"    {% if report_type == 'sales_master' %}selected{% endif %}>Sales Report</option>
-                        <option value="sales_detail"    {% if report_type == 'sales_detail' %}selected{% endif %}>Sales Detail</option>
-                        <option value="purchase_master"  {% if report_type == 'purchase_master' %}selected{% endif %}>Purchase Report</option>
-                        <option value="purchase_detail"  {% if report_type == 'purchase_detail' %}selected{% endif %}>Purchase Detail</option>
+                        {% if category == 'sales' %}
+                            <option value="sales_detail"   {% if report_type == 'sales_detail' %}selected{% endif %}>Sales Detail</option>
+                            <option value="sales_summary"  {% if report_type == 'sales_summary' %}selected{% endif %}>Sales Summary</option>
+                            <option value="sales_customer" {% if report_type == 'sales_customer' %}selected{% endif %}>Sales Customer-Wise</option>
+                            <option value="sales_product"  {% if report_type == 'sales_product' %}selected{% endif %}>Sales Product-Wise</option>
+                        {% elif category == 'purchase' %}
+                            <option value="purchase_detail"   {% if report_type == 'purchase_detail' %}selected{% endif %}>Purchase Detail</option>
+                            <option value="purchase_summary"  {% if report_type == 'purchase_summary' %}selected{% endif %}>Purchase Summary</option>
+                            <option value="purchase_supplier" {% if report_type == 'purchase_supplier' %}selected{% endif %}>Purchase Supplier-Wise</option>
+                            <option value="purchase_product"  {% if report_type == 'purchase_product' %}selected{% endif %}>Purchase Product-Wise</option>
+                        {% elif category == 'stock' %}
+                            <option value="stock_detail" {% if report_type == 'stock_detail' %}selected{% endif %}>Stock Detail</option>
+                            <option value="stock_ledger" {% if report_type == 'stock_ledger' %}selected{% endif %}>Item Stock Ledger</option>
+                        {% endif %}
                     </select>
                 </div>
             </div>
@@ -38,83 +56,36 @@
     </section>
 
     <!-- ── Report Results ─────────────────────────────────── -->
-    {% if report_type %}
+    {% if report_type and columns %}
     <section class="admin-card">
         <div class="admin-card-header">
-            <h2>
-                {% if report_type == 'sales_master' %}Sales Report
-                {% elif report_type == 'sales_detail' %}Sales Detail Report
-                {% elif report_type == 'purchase_master' %}Purchase Report
-                {% elif report_type == 'purchase_detail' %}Purchase Detail Report
-                {% endif %}
-            </h2>
+            <h2>{{ report_title }}</h2>
+            <span class="badge badge-info">{{ results|length }} record{{ results|length|pluralize }}</span>
         </div>
-        <table class="data-table">
-            <thead>
-                <tr>
-                {% if report_type == 'sales_master' %}
-                    <th>Entry No</th>
-                    <th>Customer</th>
-                    <th>Order Date</th>
-                    <th>Total Amount</th>
-                {% elif report_type == 'sales_detail' %}
-                    <th>Entry No</th>
-                    <th>Order Date</th>
-                    <th>Product</th>
-                    <th>Qty</th>
-                    <th>Rate</th>
-                    <th>Line Total</th>
-                {% elif report_type == 'purchase_master' %}
-                    <th>Entry No</th>
-                    <th>Supplier</th>
-                    <th>Order Date</th>
-                    <th>Total Amount</th>
-                {% elif report_type == 'purchase_detail' %}
-                    <th>Entry No</th>
-                    <th>Order Date</th>
-                    <th>Product</th>
-                    <th>Qty</th>
-                    <th>Rate</th>
-                    <th>Line Total</th>
-                {% endif %}
-                </tr>
-            </thead>
-            <tbody>
-                {% for row in results %}
-                <tr>
-                {% if report_type == 'sales_master' %}
-                    <td>{{ row.entry_no }}</td>
-                    <td>{{ row.customer_name }}</td>
-                    <td>{{ row.order_date }}</td>
-                    <td>{{ row.total_amount }}</td>
-                {% elif report_type == 'sales_detail' %}
-                    <td>{{ row.entry_no }}</td>
-                    <td>{{ row.order_date }}</td>
-                    <td>{{ row.product_name }}</td>
-                    <td>{{ row.qty }}</td>
-                    <td>{{ row.rate }}</td>
-                    <td>{{ row.line_total }}</td>
-                {% elif report_type == 'purchase_master' %}
-                    <td>{{ row.entry_no }}</td>
-                    <td>{{ row.supplier_name }}</td>
-                    <td>{{ row.order_date }}</td>
-                    <td>{{ row.total_amount }}</td>
-                {% elif report_type == 'purchase_detail' %}
-                    <td>{{ row.entry_no }}</td>
-                    <td>{{ row.order_date }}</td>
-                    <td>{{ row.product_name }}</td>
-                    <td>{{ row.qty }}</td>
-                    <td>{{ row.rate }}</td>
-                    <td>{{ row.line_total }}</td>
-                {% endif %}
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="6">No records found for this report.</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+        <div class="table-wrapper">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        {% for col in columns %}
+                            <th>{{ col }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in results %}
+                    <tr>
+                        {% for cell in row %}
+                            <td>{{ cell }}</td>
+                        {% endfor %}
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="{{ columns|length }}">No records found for this report.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </section>
     {% endif %}
 

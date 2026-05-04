@@ -915,3 +915,320 @@ body.app-layout {
 .empty-state .btn {
     margin-top: 0.5rem;
 }
+
+/* ═══════════════════════════════════════════════════════
+   SIDEBAR DROPDOWN (Reports)
+═══════════════════════════════════════════════════════ */
+.sidebar-dropdown {
+    list-style: none;
+}
+
+.sidebar-dropdown > summary {
+    list-style: none;
+    cursor: pointer;
+}
+
+.sidebar-dropdown > summary::-webkit-details-marker {
+    display: none;
+}
+
+.sidebar-dropdown > summary .dropdown-chevron {
+    margin-left: auto;
+    transition: transform 0.25s ease;
+    opacity: 0.5;
+}
+
+.sidebar-dropdown[open] > summary .dropdown-chevron {
+    transform: rotate(180deg);
+    opacity: 1;
+}
+
+.sidebar-sub-nav {
+    display: flex;
+    flex-direction: column;
+    padding-left: 2.2rem;
+    margin-top: 0.15rem;
+    gap: 0.1rem;
+}
+
+.nav-sub-item {
+    display: block;
+    padding: 0.45rem 0.8rem;
+    border-radius: 6px;
+    color: #8a93a0;
+    font-size: 0.82rem;
+    font-weight: 500;
+    transition: background 0.18s, color 0.18s;
+}
+
+.nav-sub-item:hover {
+    background: #2a2d35;
+    color: #fff;
+}
+
+/* ═══════════════════════════════════════════════════════
+   FILTER BAR (Customer Products Page)
+═══════════════════════════════════════════════════════ */
+.filter-bar {
+    background: #fff;
+    padding: 1rem 1.4rem;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    margin-bottom: 1.5rem;
+}
+
+.filter-form {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    flex-wrap: wrap;
+}
+
+.filter-group {
+    flex: 1;
+    min-width: 140px;
+}
+
+.filter-input,
+.filter-select {
+    width: 100%;
+    padding: 0.55rem 0.85rem;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.filter-input:focus,
+.filter-select:focus {
+    border-color: var(--accent);
+}
+
+/* ═══════════════════════════════════════════════════════
+   BUNDLE CARDS (Customer Products Page)
+═══════════════════════════════════════════════════════ */
+.bundles-section {
+    margin-bottom: 1.8rem;
+}
+
+.bundle-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.2rem;
+}
+
+.bundle-card {
+    background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%);
+    border: 1px solid #d1fae5;
+    border-radius: var(--radius);
+    padding: 1.4rem;
+    box-shadow: var(--shadow);
+    transition: transform 0.2s, box-shadow 0.2s;
+    position: relative;
+}
+
+.bundle-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 24px rgba(15, 163, 127, 0.15);
+}
+
+.bundle-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.8rem;
+}
+
+.bundle-name {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text);
+}
+
+.badge-discount {
+    background: var(--accent);
+    color: #fff;
+    padding: 0.2rem 0.6rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.bundle-pricing {
+    margin-bottom: 1rem;
+}
+
+.price-original {
+    text-decoration: line-through;
+    color: var(--muted);
+    font-size: 0.88rem;
+    margin-right: 0.6rem;
+}
+
+.price-discounted {
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: var(--accent);
+}
+
+.bundle-card-actions {
+    display: flex;
+    gap: 0.6rem;
+}
+
+/* ═══════════════════════════════════════════════════════
+   BUNDLE MODAL (What's Inside)
+═══════════════════════════════════════════════════════ */
+.bundle-modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+}
+
+.bundle-modal-overlay.active {
+    display: flex;
+    animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+.bundle-modal {
+    background: #fff;
+    border-radius: 12px;
+    width: 100%;
+    max-width: 440px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+    animation: slideUp 0.25s ease-out;
+    overflow: hidden;
+}
+
+@keyframes slideUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.bundle-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.2rem 1.5rem;
+    border-bottom: 1px solid #eee;
+}
+
+.bundle-modal-header h3 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+.bundle-modal-close {
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+    color: var(--muted);
+    transition: color 0.15s;
+    padding: 0.2rem 0.5rem;
+}
+
+.bundle-modal-close:hover {
+    color: var(--text);
+}
+
+.bundle-modal-body {
+    padding: 1.5rem;
+}
+
+.bundle-modal-label {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--muted);
+    font-weight: 600;
+    margin-bottom: 0.8rem;
+}
+
+.bundle-contents-list {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 1.2rem 0;
+}
+
+.bundle-contents-list li {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #f3f3f3;
+    font-size: 0.9rem;
+}
+
+.bundle-contents-list li:last-child {
+    border-bottom: none;
+}
+
+.item-name {
+    font-weight: 600;
+    color: var(--text);
+}
+
+.item-detail {
+    color: var(--muted);
+    font-size: 0.85rem;
+}
+
+.bundle-modal-pricing {
+    background: #f8faf9;
+    border-radius: 8px;
+    padding: 0.8rem 1rem;
+}
+
+.price-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.3rem 0;
+    font-size: 0.9rem;
+}
+
+.price-row-final {
+    border-top: 1px solid #e0e0e0;
+    padding-top: 0.6rem;
+    margin-top: 0.3rem;
+    font-weight: 700;
+}
+
+/* ═══════════════════════════════════════════════════════
+   ADMIN BUNDLE ITEM ROWS
+═══════════════════════════════════════════════════════ */
+.bundle-items-section {
+    border-top: 1px solid #e0e0e0;
+    padding-top: 1rem;
+    margin-top: 1rem;
+}
+
+.bundle-item-row {
+    animation: slideDown 0.2s ease-out;
+}
+
+.bundle-item-row + .bundle-item-row {
+    margin-top: 0.5rem;
+}
+
+/* ═══════════════════════════════════════════════════════
+   FORM HINT (Warehouse Lock)
+═══════════════════════════════════════════════════════ */
+.form-hint {
+    font-size: 0.78rem;
+    display: block;
+}
